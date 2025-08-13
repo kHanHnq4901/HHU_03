@@ -4,7 +4,7 @@ import { hookProps, updateXmlFile } from './controller';
 
 import { uniqueId } from 'lodash';
 import { store } from '../../component/drawer/drawerContent/controller';
-import { KHCMISRepository, deleteDataDB } from '../../database/repository';
+import { InfoMeterRepository, deleteDataDB } from '../../database/repository';
 import { GetMaSoAndDataFromDLHNCMIS, PropsSoapGetMaSoAndDataDLHNReturn, SoapGetMaSoAndDataFromDLHN, getDataFromServerNPC } from '../../service/api/serverData';
 import { savePathImport } from '../../service/storage';
 import { getLastInfoDLHN, saveInfoDLHN } from '../../service/storage/storageDLHN';
@@ -187,7 +187,7 @@ export async function onImportDLHNPress(){
 
              
 
-              const succeed = await KHCMISRepository.save(row);
+              const succeed = await InfoMeterRepository.save(row);
               if (succeed === false) {
                 await new Promise(resolve => {
                   Alert.alert('Lỗi', 'Nhập file lỗi', [
@@ -354,7 +354,7 @@ export async function onImportFromServerPress() {
             const index = i + 1;
             const row = convertXmlTabelToRowCmis(tabel, index, store.state.appSetting.loginMode, store.state.appSetting.loginMode);
             
-            const succeed = await KHCMISRepository.save(row);
+            const succeed = await InfoMeterRepository.save(row);
             if (succeed === false) {
               await new Promise(resolve => {
                 Alert.alert('Lỗi', 'Nhập file lỗi', [

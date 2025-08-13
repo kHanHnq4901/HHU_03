@@ -2,9 +2,9 @@ import axios from 'axios';
 
 import { PropsCommonResponse } from '.';
 import { store } from '../../screen/login/controller';
-import { PropsKHCMISEntity } from '../../database/entity';
+import { PropsInfoMeterEntity } from '../../database/entity';
 import { toLocaleDateString } from '../../util';
-import { KHCMISRepository } from '../../database/repository';
+import { InfoMeterRepository, checkTabelDBIfExist } from '../../database/repository';
 import { WriteLog } from '../../shared/file';
 import xml2js, { parseString } from 'react-native-xml2js';
 import { PropsStorageDLHN } from '../storage/storageDLHN';
@@ -31,6 +31,7 @@ const api = '';
 export const dateReleaseApi = '16042021';
 export const endPoints = {
   login : '/api/Login',
+  getMeterAccount : '/api/GetMeterAccount',
   loginNPC: '/api/GCS/Login',
   getDataNPC: '/api/GCS/GetData_HES',
   pushDataNPC: '/api/GCS/UploadFile_InputMeter',
@@ -94,7 +95,10 @@ type PropsLogin = {
   userName: string;
   password: string;
 };
-
+type PropsGetMeterAccount= {
+  userID: string;
+  token: string;
+};
 /// NPC
 
 export type PropsLoginServerNPCReturn = {
@@ -292,7 +296,7 @@ type PropsPushDataServerDLHNReturn = {
 };
 
 export async function pushDataToServerNPC(
-  props: PropsKHCMISEntity,
+  props: PropsInfoMeterEntity,
 ): Promise<PropsCommonResponse> {
   const ret: PropsCommonResponse = {
     bSucceed: false,
@@ -477,7 +481,11 @@ export const login = async (
     };
 
     const { data } = await axios.get(url, { params });
-
+    store.setState(state => {
+      state.DLHNUser.moreInfoUser.token = data.TOKEN;
+      state.DLHNUser.moreInfoUser.userId = data.USER_ID;
+      return { ...state };
+    });
     console.log('📥 Response data:', data);
 
     // Kiểm tra mã phản hồi từ server
@@ -503,10 +511,61 @@ export const login = async (
 
   return ret;
 };
+export const GetMeterAccount = async (
+  props: PropsGetMeterAccount,
+): Promise<PropsCommonResponse> => {
+  const ret: PropsCommonResponse = {
+    bSucceed: false,
+    obj: undefined,
+    strMessage: '',
+  };
 
+
+  try {
+    const url = getUrl(endPoints.getMeterAccount);
+    console.log('🌐 URL:', url);
+
+    const params = {
+      UserID: props.userID,
+      Token: props.token,
+    };
+
+    const { data } = await axios.get(url, { params });
+    console.log('📥 Response data get Meter:', url, params);
+    console.log('📥 Response data get Meter:', data);
+    
+    // Đảm bảo table đã tồn tại
+    await checkTabelDBIfExist();
+    
+    // Lưu từng phần tử vào DB
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        // Bổ sung ID nếu cần (ví dụ dùng METER_NO làm id)
+        const itemWithId = {
+          ...item,
+          id: item.METER_NO ?? item.MODULE_NO ?? Date.now().toString(),
+        };
+    
+        const success = await InfoMeterRepository.save(itemWithId);
+        if (!success) {
+          console.log('❌ Lưu thất bại cho item:', itemWithId);
+        }
+      }
+    } else {
+      console.log('❌ Dữ liệu không đúng định dạng mảng:', data);
+    }
+    
+    console.log (checkTabelDBIfExist())
+  } catch (err: any) {
+    console.log('❌ Error:', err);
+  
+  }
+
+  return ret;
+};
 
 export async function pushDataToServerDLHN(
-  props: PropsKHCMISEntity,
+  props: PropsInfoMeterEntity,
 ): Promise<PropsCommonResponse> {
   const ret: PropsCommonResponse = {
     bSucceed: false,
@@ -521,7 +580,7 @@ export async function pushDataToServerDLHN(
 
   let image: string | null = null;
   if (props.hasImage === '1') {
-    image = await KHCMISRepository.getImage(props.SERY_CTO, props.LOAI_BCS);
+    image = await InfoMeterRepository.getImage(props.SERY_CTO, props.LOAI_BCS);
   }
 
   let messageLog: string = '';

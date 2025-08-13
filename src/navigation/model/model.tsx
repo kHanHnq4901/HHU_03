@@ -84,7 +84,7 @@ export type ParamsDrawerProps = {
 };
 
 export type DrawerParamsList = {
-  Map :  ParamsDrawerProps;
+
   Overview: ParamsDrawerProps;
   ViewData: NavigatorScreenParams<StackViewDataNavigationProp>;
   WriteData: NavigatorScreenParams<StackWiteDataNavigationProp>;
@@ -107,6 +107,9 @@ export type DrawerParamsList = {
   ChangePassword: ParamsDrawerProps;
   SupportCustomer: ParamsDrawerProps;
   About: ParamsDrawerProps;
-  GuideBook: undefined;
-  
+  GuideBook: ParamsDrawerProps;
+  Statistics : ParamsDrawerProps;
+  ConfigMeter: ParamsDrawerProps;
+  ManualRead : ParamsDrawerProps;
+  AutomaticRead :  ParamsDrawerProps;
 };

@@ -3,8 +3,8 @@ import { Alert } from 'react-native';
 import RNFS from 'react-native-fs';
 import xml2js, { parseString } from 'react-native-xml2js';
 import { PropDataBookDLHN } from '../component/bookServer';
-import { PropsKHCMISEntity, dumyEntity } from '../database/entity';
-import { KHCMISRepository, deleteDataDB } from '../database/repository';
+import { PropsInfoMeterEntity, dumyEntity } from '../database/entity';
+import { InfoMeterRepository, deleteDataDB } from '../database/repository';
 import { PropsDataServerNPCReturn } from '../service/api/serverData';
 import {
   TYPE_READ_RF,
@@ -33,8 +33,8 @@ export function convertXmlTabelToRowCmis(
   index: number,
   mode: LoginModeType,
   idFile: string
-): PropsKHCMISEntity {
-  const row = {} as PropsKHCMISEntity;
+): PropsInfoMeterEntity {
+  const row = {} as PropsInfoMeterEntity;
   try {
   for (let i in dumyEntity) {
     //@ts-expect-error
@@ -133,7 +133,7 @@ export const updateDbByXml = async (
         // if (tabel.CS_MOI && tabel.CS_MOI !== '0') {
         //   row.LoaiDoc = TYPE_READ_RF.READ_SUCCEED;
         // }
-        const succeed = await KHCMISRepository.save(row);
+        const succeed = await InfoMeterRepository.save(row);
         if (succeed === false) {
           await new Promise(resolve => {
             Alert.alert('Lỗi', 'Nhập file lỗi', [
@@ -172,7 +172,7 @@ export const exportDB2Xml = async (idFile?: string): Promise<string | null> => {
     Table1: [],
   };
 
-  const dataDB = await KHCMISRepository.findAll();
+  const dataDB = await InfoMeterRepository.findAll();
   if (dataDB.length === 0) {
     return null;
   }

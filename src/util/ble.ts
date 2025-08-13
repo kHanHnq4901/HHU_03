@@ -1,11 +1,16 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
-
+import {
+  connectLatestBLE,
+  handleUpdateValueForCharacteristic,
+  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
+  initModuleBle,
+} from '../service/hhu/bleHhuFunc';
 const TAG = 'Ble.ts:';
 
-let service: string | null = null;
-let characteristic: string | null = null;
+let service: string ;
+let characteristic: string;
 
 export const requestBlePermission = async (): Promise<boolean> => {
   if (Platform.OS === 'android' && Platform.Version >= 23) {
@@ -60,7 +65,6 @@ export const connect = async (id: string): Promise<boolean> => {
 
 export const startNotification = async (idPeripheral: string) => {
   try {
-    console.log('idPeripheral:', idPeripheral);
     const res = await BleManager.retrieveServices(idPeripheral);
 
     const info = res as unknown as {
@@ -76,17 +80,7 @@ export const startNotification = async (idPeripheral: string) => {
       }[];
     };
 
-    // for(let i = 0; i < info.characteristics.length; i++){
 
-    //   if(info.characteristics[i].characteristic?.length > 20 && info.characteristics[i].service?.length > 20){
-
-    //   }
-    // }
-
-    //console.log(TAG, 'info: ' + String(info));
-
-    //console.log(TAG, JSON.stringify(info.characteristics));
-    //console.log(TAG, 'length:', info.characteristics.length);
     let element = info.characteristics.find(element => {
       return (
         element.characteristic &&
@@ -95,18 +89,26 @@ export const startNotification = async (idPeripheral: string) => {
         element.service
       );
     });
-    //console.log('element:', element);
+    console.log('element:', element);
     if (!element) {
       console.log(TAG, 'no find element');
       return;
     }
     service = element.service;
     characteristic = element.characteristic;
-
-    // console.log('service:', service);
-    // console.log('characteristic:', characteristic);
-
-    await BleManager.startNotification(idPeripheral, service, characteristic);
+    
+    BleManager.startNotification(
+      idPeripheral, service, characteristic
+    )
+      .then(() => {
+       
+        console.log("Notification started");
+      })
+      .catch((error) => {
+        // Failure code
+        console.log(error);
+      });
+   
   } catch (err: any) {
     console.log(TAG, err);
   }
@@ -118,11 +120,17 @@ export const send = async (idPeripheral: string, data: any[]) => {
     //console.log('characteristic UUID: ', characteristic);
 
     await BleManager.write(idPeripheral, service, characteristic, data);
+    const value = await BleManager.read(idPeripheral, service, characteristic);
+    console.log('Giá trị gửi đi:', toHexString(value));
   } catch (err: any) {
     console.log(TAG + 'here:', err);
   }
 };
-
+function toHexString(byteArray: number[]) {
+  return byteArray
+    .map(b => b.toString(16).padStart(2, '0')) // Chuyển sang hex, thêm 0 nếu 1 ký tự
+    .join(' ');
+}
 export const stopNotification = async (idPeripheral: string) => {
   try {
     await BleManager.stopNotification(idPeripheral, service, characteristic);

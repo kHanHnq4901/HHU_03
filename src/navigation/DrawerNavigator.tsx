@@ -1,35 +1,25 @@
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
-import component from '../component';
-import { Header } from '../component/header';
-import { GuideBookScreen } from '../screen/guideBook';
 import { screenDatas } from '../shared';
-import { Fonts, scale } from '../theme';
+import { Fonts } from '../theme';
+import { GuideBookScreen } from '../screen/guideBook';
 import { DrawerParamsList } from './model/model';
-import { SetUpBleScreen } from '../screen/ble';
 
-const Drawer = createDrawerNavigator<DrawerParamsList>();
+const Stack = createStackNavigator<DrawerParamsList>();
 
-export const heightHeader = 50 * scale;
-
-export const DrawerNavigator = () => {
+export const StackNavigator = () => {
   return (
-
-    <Drawer.Navigator
-        initialRouteName="Overview"
-        screenOptions={{
-          headerTitleStyle: { fontFamily: Fonts },
-          drawerStyle: { width: '80%', maxWidth: 450 },
-          header: props => <Header {...props}>{null}</Header>, // fix lỗi thiếu children
-          swipeEdgeWidth: 0,
-        }}
-        drawerContent={props => <component.DrawerContent {...props}>{null}</component.DrawerContent>} // fix lỗi thiếu children
-      >
-        
+    <Stack.Navigator
+      initialRouteName="Overview"
+      screenOptions={{
+        headerShown: true,
+        headerTitleStyle: { fontFamily: Fonts },
+      }}
+    >
       {screenDatas.map(e => {
         if (e.component) {
           return (
-            <Drawer.Screen
+            <Stack.Screen
               key={e.id}
               name={e.id}
               component={e.component}
@@ -37,17 +27,9 @@ export const DrawerNavigator = () => {
               initialParams={{ title: e.title, info: e.info }}
             />
           );
-        } else {
-          return null;
         }
+        return null;
       })}
-      
-      <Drawer.Screen
-        name="GuideBook"
-        component={GuideBookScreen}
-        options={{ headerShown: false }}
-      />
-    </Drawer.Navigator>
-
+    </Stack.Navigator>
   );
 };

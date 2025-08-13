@@ -2,7 +2,7 @@ import SQLite from 'react-native-sqlite-storage';
 import { TYPE_READ_RF } from '../../service/hhu/defineEM';
 import { NAME_CSDL, PATH_EXECUTE_CSDL, PATH_EXPORT_CSDL } from '../../shared/path';
 import { isNumeric, showAlert } from '../../util';
-import { dumyEntity, GetStringSelectEntity, PropsKHCMISEntity, TABLE_NAME } from '../entity';
+import { dumyEntity, GetStringSelectEntity,PropsInfoMeterEntity, TABLE_NAME } from '../entity';
 import { dataDBTabel, getTypeOfColumn, PropsPercentRead } from '../model';
 import { PropsFilter, PropsPagination, PropsSorting } from '../service';
 import RNFS from 'react-native-fs';
@@ -144,12 +144,12 @@ export interface ICMISKHRepository {
   findAll: (
     pagination?: PropsPagination,
     condition?: PropsCondition,
-  ) => Promise<PropsKHCMISEntity[]>;
+  ) => Promise<PropsInfoMeterEntity[]>;
   findByColumn: (
     filter: PropsFilter,
     pagination?: PropsPagination,
     sort?: PropsSorting,
-  ) => Promise<PropsKHCMISEntity[]>;
+  ) => Promise<PropsInfoMeterEntity[]>;
   findUniqueValuesInColumn: (
     filter: PropsFilter,
     pagination?: PropsPagination,
@@ -159,7 +159,7 @@ export interface ICMISKHRepository {
     condition: PropsCondition,
     valueSet: { [key: string]: any },
   ) => Promise<boolean>;
-  save: (item: PropsKHCMISEntity) => Promise<boolean>;
+  save: (item: PropsInfoMeterEntity) => Promise<boolean>;
   getPercentRead: () => Promise<PropsPercentRead>;
   getImage: (seri: string, loaiBCS: string) => Promise<string | null>;
 }
@@ -173,7 +173,7 @@ export const closeConnection = async () => {
   }
 };
 
-export const KHCMISRepository = {} as ICMISKHRepository;
+export const InfoMeterRepository = {} as ICMISKHRepository;
 
 const filterArr = (items: any[], pagination: PropsPagination): any[] => {
   pagination.itemPerPage = pagination.itemPerPage ?? 1;
@@ -189,11 +189,11 @@ const filterArr = (items: any[], pagination: PropsPagination): any[] => {
   return items;
 };
 
-KHCMISRepository.findAll = async (
+InfoMeterRepository.findAll = async (
   pagination?: PropsPagination,
   condition?: PropsCondition,
 ) => {
-  let items: PropsKHCMISEntity[] = [];
+  let items: PropsInfoMeterEntity[] = [];
   try {
     if ((await getDBConnection()) === false) {
       return items;
@@ -280,12 +280,12 @@ KHCMISRepository.findAll = async (
   return items;
 };
 
-KHCMISRepository.findByColumn = async (
+InfoMeterRepository.findByColumn = async (
   filter: PropsFilter,
   pagination?: PropsPagination,
   sort?: PropsSorting,
 ) => {
-  let items: PropsKHCMISEntity[] = [];
+  let items: PropsInfoMeterEntity[] = [];
   try {
     if ((await getDBConnection()) === false) {
       return items;
@@ -337,7 +337,7 @@ KHCMISRepository.findByColumn = async (
   return items;
 };
 
-KHCMISRepository.findUniqueValuesInColumn = async (
+InfoMeterRepository.findUniqueValuesInColumn = async (
   filter: PropsFilter,
   pagination?: PropsPagination,
   sort?: PropsSorting,
@@ -383,7 +383,7 @@ const convertStringSpecial = (value :any): string => {
   }
 };
 
-KHCMISRepository.update = async (
+InfoMeterRepository.update = async (
   condition: PropsCondition,
   valueSet: { [key: string]: any },
 ): Promise<boolean> => {
@@ -454,7 +454,7 @@ KHCMISRepository.update = async (
   return false;
 };
 
-KHCMISRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
+InfoMeterRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
   // not change position of element in result
   const result: PropsPercentRead = {
     readFailed: 0,
@@ -508,18 +508,18 @@ KHCMISRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
   return result;
 };
 
-KHCMISRepository.save = async (item: PropsKHCMISEntity): Promise<boolean> => {
+InfoMeterRepository.save = async (item: PropsInfoMeterEntity): Promise<boolean> => {
   try {
     if ((await getDBConnection()) === false) {
       return false;
     }
 
-    let queryCheckExist = `SELECT id FROM ${TABLE_NAME}  WHERE id = "${item.id}";`; //'id'
+    let queryCheckExist = `SELECT id FROM ${TABLE_NAME}  WHERE id = "${item.METER_NO}";`; //'id'
 
     const res = await db?.executeSql(queryCheckExist);
     if (res) {
       if (res[0].rows.length > 0) {
-        console.log('Item exist ' + item.id);
+        console.log('Item exist ' + item.METER_NO);
         return true;
       }
     }
@@ -560,7 +560,7 @@ KHCMISRepository.save = async (item: PropsKHCMISEntity): Promise<boolean> => {
   return false;
 };
 
-KHCMISRepository.getImage = async (seri: string, loaiBCS: string) => {
+InfoMeterRepository.getImage = async (seri: string, loaiBCS: string) => {
 
   let str : string | null = null;
  

@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StackRootParamsList } from './model/model';
 import { LoginScreen } from '../screen/login';
 import { Pressable, Text, View } from 'react-native';
-import { DrawerNavigator } from './DrawerNavigator';
+import { StackNavigator } from './DrawerNavigator';
 import { SettingIPPortScreen } from '../screen/settingIPportScreen';
 import { SetUpBleScreen } from '../screen/ble/index';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -23,7 +23,7 @@ export function StackRootNavigator() {
           gestureEnabled: false,
         }}>
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Drawer" component={DrawerNavigator} />
+        <Stack.Screen name="Drawer" component={StackNavigator} />
         
         <Stack.Screen
           name="BleScreen"
@@ -34,6 +34,7 @@ export function StackRootNavigator() {
         <Stack.Screen
           name="SettingIPPort"
           component={SettingIPPortScreen}
+          
           options={{
             headerShown: true,
             title: 'Cấu hình địa chỉ IP',

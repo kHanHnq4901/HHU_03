@@ -146,18 +146,7 @@ export async function hhuFunc_Send(
   HhuObj.buffTx.copy(buffSend, 0, 0, lengthSend);
   HhuObj.countRec = 0;
   HhuObj.flag_rec = false;
-
-  //console.warn('test here 1');
   if (ObjSend.id) {
-    //if (true) {
-    // console.log(
-    //   'send payload ble : ' +
-    //     (lengthSend - identityHeader.byteLength) +
-    //     ' bytes',
-    // );
-    console.log('Send bytes: ', lengthSend);
-    console.log(BufferToString(buffSend, 0, lengthSend, 16, true));
-
     if (header.u8Cmd === TYPE_HHU_CMD.DATA) {
       if (ObjSend.isNeedUpdate === true) {
         showAlert('Cần cập nhật phiên bản mới cho thiết bị cầm tay', {
@@ -167,7 +156,7 @@ export async function hhuFunc_Send(
         return false;
       }
     }
-
+    console.log (ObjSend.id)
     await BleFunc_Send(ObjSend.id, Array.from(buffSend));
     //console.log('here a');
     return true;
@@ -202,7 +191,7 @@ export async function analysisRx(
   let hhuHeader = {} as hhuFunc_HeaderProps;
 
   //console.log('1');
-  const btimeout = await waitHHU(timeout + 1200);
+  const btimeout = await waitHHU(timeout + 2000);
   //console.log('2');
 
   if (btimeout === false) {
@@ -275,9 +264,7 @@ export const ShakeHand = async (): Promise<boolean | 1> => {
     u16FSN: 0xffff,
     u16Length: pass.length,
   };
-
   await BleFunc_StartNotification(ObjSend.id as string);
-
   let bResult: boolean = await hhuFunc_Send(header, pass);
 
   //console.log('bResult:', bResult);
@@ -285,7 +272,7 @@ export const ShakeHand = async (): Promise<boolean | 1> => {
   const respond = {} as ResponseRxProps;
 
   if (bResult) {
-    bResult = await analysisRx(respond, 3000);
+    bResult = await analysisRx(respond, 1200);
 
     if (bResult) {
       if (respond.hhuHeader.u8Cmd === TYPE_HHU_CMD.ACK) {

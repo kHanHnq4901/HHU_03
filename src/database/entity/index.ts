@@ -16,68 +16,49 @@ export type PropsAddMoreEntity = {
   hasImage: '0' | '1';
   idFile: string;
 };
+export type PropsMeterModel = {
+  LoaiDoc: TYPE_READ_RF;
+  isSent: string;
+  loginMode: string;
+  MA_QUYEN: any;
+  MA_TRAM: any;
+  RF: string;
+  LOAI_BCS: string;
+  SERY_CTO: string;
+  METER_NO: string;
+  METER_NAME: string;
+  METER_MODEL_DESC: string;
+  MODULE_NO: string;
+  CUSTOMER_CODE : string;
+  CUSTOMER_NAME : string;
+  ADDRESS : string ; 
+  PHONE : string ; 
+  EMAIL : string ; 
+  CREATED : string ;
+  LINE_NAME : string ;
+  COORDINATE : string ; 
+  LINE_ID : string;
+  METER_MODEL_ID: string;
+};
+export type PropsInfoMeterEntity = PropsMeterModel;
 
-export type PropsKHCMISEntity = PropsXmlModel & PropsAddMoreEntity;
+export const TABLE_NAME = 'INFO_METER';
 
-export const TABLE_NAME = 'KHCMIS';
-
-export const dumyEntity: PropsKHCMISEntity = {
-  MA_NVGCS: '',
-  MA_KHANG: '',
-  MA_DDO: '',
-  MA_DVIQLY: '',
-  MA_GC: '',
-  MA_QUYEN: '',
-  MA_TRAM: '',
-  BOCSO_ID: '',
-  LOAI_BCS: '',
-  LOAI_CS: '',
-  TEN_KHANG: '',
-  DIA_CHI: '',
-  MA_NN: '',
-  SO_HO: '',
-  MA_CTO: '',
-  SERY_CTO: '',
-  HSN: '',
-  CS_CU: '',
-  TTR_CU: '',
-  SL_CU: '',
-  SL_TTIEP: '',
-  NGAY_CU: '',
-  CS_MOI: '',
-  TTR_MOI: '',
-  SL_MOI: '',
-  CHUOI_GIA: '',
-  KY: '',
-  THANG: '',
-  NAM: '',
-  NGAY_MOI: '',
-  NGUOI_GCS: '',
-  SL_THAO: '',
-  KIMUA_CSPK: '',
-  MA_COT: '',
-  SLUONG_1: '',
-  SLUONG_2: '',
-  SLUONG_3: '',
-  SO_HOM: '',
-  PMAX: '',
-  NGAY_PMAX: '',
-  X: '',
-  Y: '',
-  Z: '',
-
-  TT: 0,
-  id: '',
-  RF: '1',
-  LoaiDoc: '',
-  GhiChu: '',
-  loginMode: 'KH Lẻ',
-  isSent: '0',
-  latitude: '',
-  longtitude: '',
-  image: '',
-  hasImage: '0',
-  idFile: '',
+export const dumyEntity: PropsInfoMeterEntity = {
+  METER_NO: '',
+  METER_NAME: '',
+  METER_MODEL_DESC: '',
+  MODULE_NO: '',
+  CUSTOMER_CODE : '',
+  CUSTOMER_NAME : '',
+  ADDRESS : '',
+  PHONE : '',
+  EMAIL : '',
+  CREATED : '',
+  LINE_NAME : '',
+  COORDINATE : '',
+  LINE_ID : '',
+  METER_MODEL_ID: '',
 };
 
 export function GetStringSelectEntity() {

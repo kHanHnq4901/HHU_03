@@ -13,7 +13,7 @@ import {
 import { showAlert, showToast } from '../../util';
 import { PropsMatchSeriVersionEntity } from '../entity/matchSeriVersion';
 import { dataDBTabel } from '../model';
-import { KHCMISRepository, PropsCondition } from '../repository';
+import { InfoMeterRepository, PropsCondition } from '../repository';
 import {
   MatchSeriVersionRepository,
   checkTableDBIfExist,
@@ -153,7 +153,7 @@ export async function UpdateVersionToCurrentDb() {
   try {
     showToast('Đang kiểm tra version công tơ...');
 
-    const KHCMISEntity = await KHCMISRepository.findAll();
+    const KHCMISEntity = await InfoMeterRepository.findAll();
 
     const mapSeri = new Map<string, { RF: string; maCto: string }>();
 

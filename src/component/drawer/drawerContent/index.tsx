@@ -44,42 +44,15 @@ export const DrawerContent = (props: React.JSX.IntrinsicAttributes & ScrollViewP
     };
   }, []);
 
-  // useEffect(() => {
-  //   //console.log('a');
-  //   return () => {
-  //     console.log('onDeinit:', store?.state.appSetting);
-  //     saveValueAppSettingToNvm(store?.state.appSetting as PropsAppSetting);
-  //   };
-  // }, [store?.state.appSetting]);
-
-  //console.log('ren drawer');
-
-  const role =
-    store?.state.userRole === 'admin'
-      ? 'Admin'
-      : store?.state.userRole === 'dvkh'
-      ? 'DVKH'
-      : store?.state.userRole === 'sx'
-      ? 'Sản xuất'
-      : 'Nhân viên';
-
   const insetSafeArea = useSafeAreaInsets();
 
   return (
     <>       
       <DrawerContentScrollView {...props} bounces={false}  >
-      <Image source={require('../../../asset/images/drawer/HeaderDrawer.jpg')}
-            style={{ position:'absolute',  top: 0, left: 0 , width:'100%', height: 120,}}
-                        resizeMode='stretch'></Image>
         <View style={styles.containerInfo}>
           <View style={styles.infoUser}>
-            <Avatar.Image
-                size={60}
-                style={{ marginBottom: 10, elevation: 1 , marginTop: 0}}
-                source={require('../../../asset/images/icon/rf.jpg')}
-              />
             <Image
-              source={require('../../../asset/images/logo/logo.png')}
+              source={require('../../../asset/images/image/emic.png')}
               style={
                  styles.logoIOS
               }
@@ -87,29 +60,7 @@ export const DrawerContent = (props: React.JSX.IntrinsicAttributes & ScrollViewP
             />
             {/* <Text style={Theme.StyleCommon.title}>Gelex HHU</Text> */}
           </View>
-          {store.state.appSetting.loginMode === 'KH Lẻ' && (
-            <Text style={styles.role}>{role}</Text>
-          )}
-          {store.state.appSetting.loginMode === 'NPC' && (
-            <Text style={styles.role}>
-              Xin chào:{'  '}
-              <Text style={styles.userOnline}>
-                {store.state.NPCUser.moreInfoUser.userName}
-                <Text style={styles.role}>
-                  : {store.state.NPCUser.user.BUSSINESSID}!
-                </Text>
-              </Text>
-            </Text>
-          )}
-          {store.state.appSetting.loginMode === 'ĐL Hà Nội' && (
-            <Text style={styles.role}>
-              Xin chào:{'  '}
-              <Text style={styles.userOnline}>
-                {/* {store.state.DLHNUser.moreInfoUser.userName} */}
-                {store.state.appSetting.isCMISDLHN ? 'CMIS' : 'ĐLHN'}
-              </Text>
-            </Text>
-          )}
+         
 
           <View style={styles.body}>
             <Divider />
@@ -124,14 +75,8 @@ export const DrawerContent = (props: React.JSX.IntrinsicAttributes & ScrollViewP
                     onPress={() => {
                       infoHeader.title = element.title;
                       infoHeader.info = element.info;
-
-                      // ✅ Log để debug:
-                      console.log('Navigating to:', element.id);
-                      console.log('info:', element.info);
-                      console.log('title:', element.title);
-
                       navigation.navigate('Drawer', {
-                        screen: element.id as keyof DrawerParamsList,
+                        screen: element.id,
                         params: {
                           title: element.title,
                           info: element.info,
@@ -144,36 +89,6 @@ export const DrawerContent = (props: React.JSX.IntrinsicAttributes & ScrollViewP
                 return null;
               }
             })}
-
-            {/* title: 'Đọc RF',
-    info: `
-    Đọc dữ liệu tức thời công tơ bất kỳ, dữ liệu sẽ không được lưu vào DB.
-    Chức năng Khởi tạo, Dò sóng , Reset module công tơ
-    `,
-
-    id: 'ReadParameter',
-    icon: 'ios-book-outline',
-    component: ReadParameterScreen, */}
-            {/* <DrawerItem
-              lable="Đọc RF"
-              icon="ios-book-outline"
-              colorIcon={Theme.Colors.primary}
-              onPress={() => {
-                //console.log(element.id);
-                infoHeader.title = 'Đọc RF';
-                infoHeader.info = `
-                      Đọc dữ liệu tức thời công tơ bất kỳ, dữ liệu sẽ không được lưu vào DB.
-                      Chức năng Khởi tạo, Dò sóng , Reset module công tơ
-                      `;
-                navigation.navigate('ReadParameter', {
-                  info: `
-                        Đọc dữ liệu tức thời công tơ bất kỳ, dữ liệu sẽ không được lưu vào DB.
-                        Chức năng Khởi tạo, Dò sóng , Reset module công tơ
-                        `,
-                  title: 'Đọc RF',
-                });
-              }}
-            /> */}
 
             <Divider />
             <DrawerItem
@@ -264,7 +179,7 @@ export const DrawerContent = (props: React.JSX.IntrinsicAttributes & ScrollViewP
 const styles = StyleSheet.create({
   userOnline: {
     fontSize: normalize(18),
-    color: Colors.secondary,
+    color: Colors.primary,
     paddingRight: 5,
   },
   containerInfo: {
@@ -274,7 +189,7 @@ const styles = StyleSheet.create({
   },
   role: {
     fontSize: normalize(15),
-    color: Colors.caption,
+    color: Colors.primary,
     alignSelf: 'flex-end',
     paddingRight: 5,
   },

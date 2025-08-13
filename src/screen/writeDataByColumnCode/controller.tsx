@@ -55,7 +55,7 @@ export const requestGps = async (): Promise<boolean> => {
           //   'requestResolution:',
           //   enableLocationHook.requestResolution,
           // );
-          enableLocationHook.requestResolution();
+          //enableLocationHook.requestResolution();
           return true;
         } else {
         }
@@ -219,7 +219,7 @@ export const GetHookProps = (): HookProps => {
     );
 
     enableLocationHook.enabled = enabled;
-    enableLocationHook.requestResolution = requestResolution;
+   // enableLocationHook.requestResolution = requestResolution;
   }
 
   return hookProps;

@@ -1,5 +1,5 @@
 import { store } from '../../component/drawer/drawerContent/controller';
-import { PropsKHCMISEntity } from '../entity';
+import { PropsInfoMeterEntity } from '../entity';
 import {
   KHCMISModelFields,
   PropsKHCMISModel,
@@ -7,7 +7,7 @@ import {
   PropsTypeOf,
   dataDBTabel,
 } from '../model';
-import { KHCMISRepository, PropsCondition } from '../repository';
+import { InfoMeterRepository, PropsCondition } from '../repository';
 
 interface ICMISKHServices {
   findAll: (
@@ -47,7 +47,7 @@ export type PropsFilter = {
   endNumber?: string;
 };
 
-const convertEntity2Model = (entity: PropsKHCMISEntity): PropsKHCMISModel => {
+const convertEntity2Model = (entity: PropsInfoMeterEntity): PropsKHCMISModel => {
   const model = {} as PropsKHCMISModel;
   for (let i = 0; i < KHCMISModelFields.length; i++) {
     model[KHCMISModelFields[i]] = entity[KHCMISModelFields[i]];
@@ -66,7 +66,7 @@ CMISKHServices.findAll = async (
 
 
   const items: PropsKHCMISModel[] = [];
-  const entity = await KHCMISRepository.findAll(pagination, condition);
+  const entity = await InfoMeterRepository.findAll(pagination, condition);
   for (let i = 0; i < entity.length; i++) {
     const rowKHCMISModel = convertEntity2Model(entity[i]);
     items.push(rowKHCMISModel);
@@ -81,7 +81,7 @@ CMISKHServices.findByColumn = async (
   sort?: PropsSorting,
 ): Promise<PropsKHCMISModel[]> => {
   const items: PropsKHCMISModel[] = [];
-  const entity = await KHCMISRepository.findByColumn(filter, pagination, sort);
+  const entity = await InfoMeterRepository.findByColumn(filter, pagination, sort);
   for (let i = 0; i < entity.length; i++) {
     items.push(convertEntity2Model(entity[i]));
   }
@@ -93,7 +93,7 @@ CMISKHServices.findUniqueValuesInColumn = async (
   pagination?: PropsPagination,
   sort?: PropsSorting,
 ): Promise<PropsKHCMISModel[]> => {
-  return await KHCMISRepository.findUniqueValuesInColumn(
+  return await InfoMeterRepository.findUniqueValuesInColumn(
     filter,
     pagination,
     sort,
@@ -104,17 +104,17 @@ CMISKHServices.update = async (
   condition: PropsCondition,
   valueSet: { [key: string]: any },
 ): Promise<boolean> => {
-  return await KHCMISRepository.update(condition, valueSet);
+  return await InfoMeterRepository.update(condition, valueSet);
 };
 
 CMISKHServices.getPercentRead = async () => {
-  const result = await KHCMISRepository.getPercentRead();
+  const result = await InfoMeterRepository.getPercentRead();
   //console.log('resultbb:', result);
   return result;
 };
 
 CMISKHServices.getImage = async (seri: string, loaiBCS: string) => {
-  return await KHCMISRepository.getImage(seri, loaiBCS);
+  return await InfoMeterRepository.getImage(seri, loaiBCS);
 }
 
 

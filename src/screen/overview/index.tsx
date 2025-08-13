@@ -1,170 +1,185 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useRef } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { DetailDB } from '../../component/detailDB';
-import Theme, { Colors, normalize } from '../../theme';
+import React from 'react';
 import {
-  colorsChart,
-  dummyDataTable,
-  GetHook,
-  hookProps,
-  labelsStock,
-  onDeInit,
-  onInit,
-} from './controller';
-
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ScrollView,
+  Alert,
+  BackHandler,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import Theme, { normalize } from '../../theme';
+import { CircleSnail } from 'react-native-progress';
+import { onBleLongPress, onBlePress } from '../../component/header/handleButton';
+import { GetHookProps, store } from '../login/controller';
+import { onDeInit, onInit } from '../../component/drawer/drawerContent/controller';
 const deviceWidth = Dimensions.get('window').width;
+const itemSize = deviceWidth / 3 - 20;
 
-const ItemLabel = (props: {
-  label: string;
-  quantity: number;
-  color: string;
-}) => {
-  return (
-    <View style={styles.containerItemLabel}>
-      <View
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 15,
-          backgroundColor: props.color,
-          marginRight: 10,
-        }}
-      />
-      <Text style={{ color: 'black', fontSize: normalize(20) }}>
-        {props.label + ': ' + props.quantity}
-      </Text>
-    </View>
-  );
-};
-
-const heightChart = deviceWidth * 1;
-const innerRadius = (deviceWidth / 2) * 0.3;
-const connerRadius = (deviceWidth / 2) * 0.3 * 0.9;
-const radius = (deviceWidth / 2) * 0.9;
-const labelRadius = ((radius + innerRadius) / 2) * 0.8;
+const MENU_ITEMS = [
+  { label: 'Đọc bán tự động', icon: 'file-document-outline', subtitle: 'Còn 123 đồng hồ', screen: 'ManualRead', color: '#3F51B5' },
+  { label: 'Đọc tự động', icon: 'robot-outline', subtitle: '2 thiết bị đang chạy', screen: 'AutomaticRead', color: '#009688' },
+  { label: 'Đồng bộ', icon: 'sync', subtitle: 'Lần cuối: 10:30 06/08', screen: 'SyncScreen', color: '#4CAF50' },
+  { label: 'Thống kê', icon: 'chart-bar', subtitle: 'Xem báo cáo', screen: 'Statistics', color: '#FF9800' },
+  { label: 'Cài đặt', icon: 'cog-outline', subtitle: 'Thiết lập hệ thống', screen: 'Settings', color: '#8E24AA' },
+  { label: 'Thiết bị cầm tay', icon: 'cellphone-link', subtitle: '2 thiết bị kết nối', screen: 'BoardBLE', color: '#E91E63' },
+  { label: 'Cấu hình', icon: 'tune', subtitle: 'Chỉnh thông số', screen: 'ConfigMeter', color: '#03A9F4' },
+  { label: 'Hướng dẫn', icon: 'book-open-page-variant', subtitle: 'Xem cách sử dụng', screen: 'UserGuide', color: '#00BCD4' },
+  { label: 'Đăng xuất', icon: 'logout', subtitle: 'Thoát hệ thống', screen: 'Login', color: '#FF5722', isLogout: true },
+  { label: 'Thoát', icon: 'exit-to-app', subtitle: '', color: '#795548', isExit: true },
+];
 
 export const OverViewScreen = () => {
-  GetHook();
-
   const navigation = useNavigation();
-
+  const handlePress = (item: any) => {
+    if (item.isExit) {
+      Alert.alert('Thoát', 'Bạn có muốn thoát ứng dụng ?', [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'OK', onPress: () => BackHandler.exitApp() },
+      ]);
+    } else if (item.isLogout) {
+      Alert.alert('Đăng xuất', 'Bạn có muốn đăng xuất ?', [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
+    } else if (item.screen) {
+      // @ts-ignore
+      navigation.navigate(item.screen);
+    }
+  };
   React.useEffect(() => {
     onInit(navigation);
+
     return () => {
-      onDeInit(navigation);
+      onDeInit();
     };
   }, []);
-  let total = 0;
-  let is100percent = false;
-
-  for (let itm of hookProps.state.graphicData) {
-    total += itm.y;
-  }
-  for (let itm of hookProps.state.graphicData) {
-    if (total === itm.y) {
-      is100percent = true;
-    }
-  }
-
-  // const ref = useRef<VictoryPie>(null);
-
-  // ref.current?.render();
-
   return (
     <View style={styles.container}>
-      <ScrollView>
-        <View style={styles.container}>
-          {/* <Text style={styles.title}>
-            {total === 0 ? 'Chưa có dữ liệu' : 'Tỉ lệ lấy dữ liệu'}
-          </Text> */}
-          <View style={styles.chart}>
-          
-          </View>
-        </View>
-        {/* <View
-          style={{0
-            width: '100%',
-            height: 80,
+      <View style={styles.bleIconContainer}>
+        <TouchableOpacity
+          onLongPress={() => {
+            // headerData.reserverTitle = title; // nếu cần
+            onBleLongPress();
           }}
-        /> */}
-        <View style={styles.detailTitleChart}>
-          {hookProps.state.infoQuantityArr.map((item, index) => {
-            let quantity = 0;
-            // if (index === labelsStock.length - 1) {
-            //   for (let itm of hookProps.state.graphicData) {
-            //     quantity += itm.y;
-            //   }
-            // } else {
-              
-            //   quantity = hookProps.state.graphicData[index].y;
-            //   // if(hookProps.state.graphicData[index])
-            //   // {
-                
-            //   // }else{
-            //   //   quantity = 1;
-            //   //   console.log('item:', item);
-            //   // console.log('index:', index);
-                
-            //   // }
+          onPress={onBlePress}
+          style={styles.bleButton}
+        >
+          {store?.state.hhu.connect === 'CONNECTING' ? (
+            <CircleSnail
+              color={['red', 'green', 'blue']}
+              size={28}
+              indeterminate
+              thickness={1}
+            />
+          ) : (
+            <MaterialCommunityIcons
+              name={
+                store?.state.hhu.connect === 'CONNECTED'
+                  ? 'bluetooth-connect'
+                  : 'bluetooth-off'
+              }
+              size={28}
+              color={
+                store?.state.hhu.connect === 'CONNECTED'
+                  ? '#5fe321'
+                  : 'black'
+              }
+            />
+          )}
+        </TouchableOpacity>
+      </View>
 
-            // }
-
-            quantity = item.quantity;
-
-            return (
-              <ItemLabel
-                color={item.color}
-                label={item.label}
-                key={index.toString()}
-                quantity={quantity}
-              />
-            );
-          })}
-        </View>
-        <Text style={styles.caption} >Truy cập màn hình "Xem chỉ số" để biết thêm chi tiết</Text>
-        <DetailDB data={hookProps.state.detailDB} />
+      {/* Menu */}
+      <ScrollView contentContainerStyle={styles.gridContainer}>
+        {MENU_ITEMS.map((item, index) => (
+          <TouchableOpacity
+            key={index.toString()}
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() => handlePress(item)}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+              <Icon name={item.icon} size={34} color="#fff" />
+            </View>
+            <Text style={styles.menuLabel}>{item.label}</Text>
+            {item.subtitle ? <Text style={styles.menuSubtitle}>{item.subtitle}</Text> : null}
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  caption: {
-    textAlign: 'center',
-    fontSize: normalize(16),
-    color: Colors.caption,
-    marginBottom: 10,
-  },
   container: {
     flex: 1,
-    backgroundColor: Theme.Colors.backgroundColor,
+    backgroundColor: '#F4F6F8',
+    paddingTop: 10,
   },
-  title: {
-    fontSize: normalize(24),
-    margin: 10,
-    alignSelf: 'center',
+  bleIconContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
   },
-  chart: {
-    //backgroundColor: 'pink',
-    justifyContent: 'center',
+  bleButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     alignItems: 'center',
-    elevation: 1,
-  },
-  detailTitleChart: {
     justifyContent: 'center',
-    //alignItems: 'center',
-    flex: 1,
-    flexGrow: 1,
-    paddingLeft: deviceWidth / 2 - 50,
-    marginBottom: 20,
-    marginTop: 25,
-    //backgroundColor: 'pink',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
-  containerItemLabel: {
+  gridContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingBottom: 20,
+    paddingTop: 60, // Đẩy xuống dưới icon BLE
+  },
+  card: {
+    width: itemSize,
+    height: itemSize + 25,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 15,
     alignItems: 'center',
-    marginVertical: 5,
-    marginHorizontal: 15,
+    justifyContent: 'center',
+    padding: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  menuLabel: {
+    textAlign: 'center',
+    fontSize: normalize(14),
+    color: '#333',
+    fontWeight: '600',
+  },
+  menuSubtitle: {
+    textAlign: 'center',
+    fontSize: normalize(11),
+    color: '#888',
+    marginTop: 4,
   },
 });

@@ -6,6 +6,7 @@ import { sha256 } from 'react-native-sha256';
 import TouchID from 'react-native-touch-id';
 import * as Keychain from 'react-native-keychain';
 import {
+  GetMeterAccount,
   PropsLoginServerDLHNReturn,
   PropsLoginServerNPCReturn,
   endPoints,
@@ -204,7 +205,11 @@ export async function onLoginPress(props?: PropsLogin) {
       olState.loginMode = store.state.appSetting.loginMode;
       saveValueAppSettingToNvm(store.state.appSetting);
     }
-
+    console.log('rest : ' + rest.obj)
+    GetMeterAccount({
+      userID: store.state.DLHNUser.moreInfoUser.userId,
+      token: store.state.DLHNUser.moreInfoUser.token,
+    });
     const itemOverView = screenDatas.find(item => item.id === 'Overview');
     navigation.navigate('Drawer', {
       screen: 'Overview',
@@ -264,6 +269,4 @@ export function onBtnSettingPress() {
 
   navigation.navigate('SettingIPPort');
 }
-function getUrl(soapPushData: any) {
-  throw new Error('Function not implemented.');
-}
+

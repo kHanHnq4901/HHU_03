@@ -17,3 +17,5 @@ project(':react-native-vector-icons').projectDir = new File(rootProject.projectD
 include ':react-native-version-check'
 project(':react-native-version-check').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-version-check/android')
 
+include ':trackasia-opengl'
+project(':trackasia-opengl').projectDir = new File(rootProject.projectDir, './libs/trackasia-opengl')

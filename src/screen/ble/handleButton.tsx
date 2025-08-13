@@ -1,7 +1,7 @@
 import { checkUpdateHHU } from '../../service/api';
 import { BleFunc_SaveStorage } from '../../service/hhu/bleHhuFunc';
 import { ObjSend, ShakeHand, readVersion } from '../../service/hhu/hhuFunc';
-import { requestPermissionScan } from '../../service/permission';
+import { requestBluetoothPermissions, requestPermissionScan } from '../../service/permission';
 import BleManager from 'react-native-ble-manager';
 import * as Ble from '../../util/ble';
 import { showAlert, sleep } from '../../util';
@@ -125,39 +125,55 @@ export const connectHandle = async (id: string, name: string) => {
 };
 
 export const onScanPress = async () => {
-  if (hookProps.state.ble.isScan === true) {
+  if (hookProps.state.ble.isScan) {
     return;
   }
+
   hookProps.setState(state => {
     state.ble.listNewDevice = [];
     state.status = '';
     return { ...state };
   });
-  let requestScanPermission = await requestPermissionScan();
-  let requestPermissionGps = await requestGps();
+
+  const requestScanPermission = await requestBluetoothPermissions();
+
   try {
-    if (requestScanPermission === true && requestPermissionGps) {
+    if (requestScanPermission) {
       console.log('here request');
 
-      let isEnable: boolean = await BleManager.enableBluetooth();
-      if (isEnable === true) {
+      try {
+        await BleManager.enableBluetooth(); // Nếu bị từ chối sẽ throw error
+
         if (Platform.OS === 'android') {
-          await BleManager.start();
+          await BleManager.start({ showAlert: false });
+          console.log("BLE Module initialized");
         }
 
-        BleManager.scan([], 15, false)
-          .then(() => {
-            hookProps.setState(state => {
-              state.ble.isScan = true;
-              return { ...state };
-            });
-          })
-          .catch(resFail => {
-            console.log('fail: ', resFail);
+        // Bắt đầu quét
+        BleManager.scan([], 5, true).then(() => {
+          console.log("Scan started");
+          hookProps.setState(state => {
+            state.ble.isScan = true;
+            return { ...state };
           });
-      } else {
-        showAlert('Thiết bị cần được bật bluetooth');
+
+          // Sau 5s thì dừng quét
+          setTimeout(() => {
+            BleManager.stopScan().then(() => {
+              console.log("Scan stopped");
+              hookProps.setState(state => {
+                state.ble.isScan = false;
+                return { ...state };
+              });
+            });
+          }, 5000);
+        });
+
+      } catch (err) {
+        showAlert('Thiết bị cần được bật Bluetooth');
+        return;
       }
+
     } else {
       console.log('requestGps failed');
     }
@@ -165,6 +181,8 @@ export const onScanPress = async () => {
     console.log(TAG, 'err:', err);
   }
 };
+
+
 
 export const disConnect = async (id: string) => {
   try {
@@ -180,3 +198,5 @@ export const disConnect = async (id: string) => {
     }
   } catch {}
 };
+
+

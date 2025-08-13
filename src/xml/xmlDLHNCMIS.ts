@@ -1,6 +1,6 @@
 import { SOAP_DANH_SACH_BIEU_DLHN_TYPE_CMIS } from './../service/api/serverData';
 import { PropsXmlReturnFromFile } from '.';
-import { KHCMISRepository } from '../database/repository';
+import { InfoMeterRepository } from '../database/repository';
 import xml2js, { parseString } from 'react-native-xml2js';
 import { PropExportDb2DLHN } from './xmlDLHN';
 
@@ -132,7 +132,7 @@ export const exportDB2XmlDLHNCMIS = async (
     Table1: [],
   };
 
-  const dataDB = await KHCMISRepository.findAll();
+  const dataDB = await InfoMeterRepository.findAll();
   if (dataDB.length === 0) {
     return null;
   }

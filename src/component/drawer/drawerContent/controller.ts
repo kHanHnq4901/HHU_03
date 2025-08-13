@@ -18,6 +18,7 @@ import { onReceiveSharingIntent } from '../../../service/event';
 import { UPDATE_FW_HHU } from '../../../service/event/constant';
 import {
   connectLatestBLE,
+  handleUpdateValueForCharacteristic,
   handleUpdateValueForCharacteristic as hhuHandleReceiveData,
   initModuleBle,
 } from '../../../service/hhu/bleHhuFunc';
@@ -63,7 +64,7 @@ function checkUpdateAppMobileInterval() {
   // }
 }
 
-const hhuHandleDisconnectedPeripheral = async (data: any) => {
+export const hhuHandleDisconnectedPeripheral = async (data: any) => {
   console.log('data disconnect peripheral:', data);
   store?.setState(state => {
     state.hhu.idConnected = null;
@@ -84,33 +85,28 @@ export const onInit = async (navigation: any) => {
     return { ...state };
   });
 
-  //console.log('add listener ble at drawer');
+  // console.log('add listener ble at drawer');
   if (!hhuDisconnectListener) {
-    bleManagerEmitter.removeAllListeners('BleManagerDisconnectPeripheral');
-    hhuDisconnectListener = bleManagerEmitter.addListener(
-      'BleManagerDisconnectPeripheral',
-      hhuHandleDisconnectedPeripheral,
+    bleManagerEmitter.removeAllListeners('onDiscoverPeripheral');
+    hhuDisconnectListener = BleManager.onDiscoverPeripheral(
+      hhuHandleDisconnectedPeripheral
     );
   }
+
   if (!hhuReceiveDataListener) {
     bleManagerEmitter.removeAllListeners(
-      'BleManagerDidUpdateValueForCharacteristic',
+      'onDidUpdateValueForCharacteristic'
     );
-    hhuReceiveDataListener = bleManagerEmitter.addListener(
-      'BleManagerDidUpdateValueForCharacteristic',
-      hhuHandleReceiveData,
+    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
+      handleUpdateValueForCharacteristic
     );
   }
 
   try {
-    // console.log('store?.state.hhu.connect :', store?.state.hhu.connect);
-    // console.log('store?.state.hhu.idConnected :', store?.state.hhu.idConnected);
-
     await initModuleBle();
 
     // init HHM meter
     InitSTARMeter();
-    //
 
     if (store?.state.hhu.connect === 'DISCONNECTED') {
       let requestScan = true;
@@ -118,7 +114,6 @@ export const onInit = async (navigation: any) => {
         requestScan = await requestPermissionBleConnectAndroid();
       }
       if (requestScan) {
-        // console.log('abghjasdkskl.....');
         connectLatestBLE(store);
       }
     }
@@ -136,32 +131,36 @@ export const onInit = async (navigation: any) => {
     if (result === true) {
       try {
         let folderExist = await RNFS.exists(PATH_IMPORT_CSDL);
-        if (folderExist !== true) {
+        if (!folderExist) {
           console.log('create folder for list csdl');
           await RNFS.mkdir(PATH_IMPORT_CSDL);
         }
+
         folderExist = await RNFS.exists(PATH_EXECUTE_CSDL);
-        if (folderExist !== true) {
+        if (!folderExist) {
           console.log('create folder for excecute csdl');
           await RNFS.mkdir(PATH_EXECUTE_CSDL);
         }
 
         folderExist = await RNFS.exists(PATH_IMPORT_XML);
-        if (folderExist !== true) {
+        if (!folderExist) {
           await RNFS.mkdir(PATH_IMPORT_XML);
         } else {
           console.log('PATH_IMPORT_XML is exist');
         }
+
         folderExist = await RNFS.exists(PATH_EXPORT_XML);
-        if (folderExist !== true) {
+        if (!folderExist) {
           await RNFS.mkdir(PATH_EXPORT_XML);
         }
+
         folderExist = await RNFS.exists(PATH_EXPORT_LOG);
-        if (folderExist !== true) {
+        if (!folderExist) {
           await RNFS.mkdir(PATH_EXPORT_LOG);
         }
+
         folderExist = await RNFS.exists(PATH_EXPORT_EXCEL);
-        if (folderExist !== true) {
+        if (!folderExist) {
           console.log('create folder for export csdl');
           await RNFS.mkdir(PATH_EXPORT_EXCEL);
         }
@@ -176,16 +175,12 @@ export const onInit = async (navigation: any) => {
       const rest = await UpdateDataSeriVersionToLocaleVariable();
       if (rest !== true) {
         console.log(TAG, 'update first time version');
-
         await UpdateFirstTimeSeriVersion();
       }
 
       await UpdateMaCongToObjFromStorageAndServer();
-
       checkUpdateAppMobileInterval();
     }
-
-    //exportXmlController.createDirectory();
   } catch (err: any) {
     console.log(TAG, err);
   }
@@ -207,14 +202,15 @@ export const onInit = async (navigation: any) => {
   });
 };
 
+
 export const onDeInit = async () => {
   console.log('remove listener ble');
-  if (hhuDisconnectListener) {
-    hhuDisconnectListener.remove();
-  }
-  if (hhuReceiveDataListener) {
-    hhuReceiveDataListener.remove();
-  }
+  // if (hhuDisconnectListener) {
+  //   hhuDisconnectListener.remove();
+  // }
+  // if (hhuReceiveDataListener) {
+  //   hhuReceiveDataListener.remove();
+  // }
   if (updateFWListener) {
     updateFWListener.remove();
   }

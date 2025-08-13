@@ -6,6 +6,7 @@ import {
   PropsLoginServerNPCReturn,
   dateReleaseApi,
 } from '../service/api/serverData';
+import { Device } from 'react-native-ble-plx';
 
 export type TYPE_TOUCH_ID = 'FaceID' | 'TouchID' | 'NoSupport';
 
@@ -16,6 +17,7 @@ export type PropsInfoNPCUser = {
   imeiDevice: string;
 };
 export type PropsInfoDLHNUser= {
+  userId : string ;
   userName: string;
   passWord: string;
   token: string;
@@ -24,6 +26,8 @@ export type PropsInfoDLHNUser= {
 
 type PropsState = {
   hhu: {
+    characteristicUUID: string;
+    serviceUUID: string;
     isConnected: boolean;
     connect: 'DISCONNECTED' | 'CONNECTED' | 'CONNECTING';
     idConnected: string | null;
@@ -31,6 +35,7 @@ type PropsState = {
     version: string;
     shortVersion: string;
     rssi: number;
+    device: Device | null;
   };
   net: {
     netconnected: boolean;
@@ -102,9 +107,11 @@ export const StoreProvider = ({ children }) => {
       version: '',
       shortVersion: '',
       rssi: 0,
-      name: ''
+      name: '',
+      serviceUUID: '',          
+      characteristicUUID: '',
+      device: null,
     },
-
     net: {
       netReachAble: false,
       netconnected: false,

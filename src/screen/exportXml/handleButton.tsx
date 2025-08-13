@@ -7,7 +7,7 @@ import { deleteFile } from '../../shared/file';
 import { Alert } from 'react-native';
 import { store } from '../../component/drawer/drawerContent/controller';
 import { navigation } from '../login/controller';
-import { KHCMISRepository, PropsCondition } from '../../database/repository';
+import { InfoMeterRepository, PropsCondition } from '../../database/repository';
 import { SoapPushDataFromDLHN, SoapPushDataFromDLHNCMIS, pushDataToServerDLHN, pushDataToServerNPC } from '../../service/api/serverData';
 import { IsReadRFSucceed, IsWriteByHand, TYPE_READ_RF } from '../../service/hhu/defineEM';
 import { checkUpdateFromStore } from '../../service/user';
@@ -153,7 +153,7 @@ export async function UpdateSentSucceedToDb(props: PropsUpdateSentToDb){
     };
 
     //@ts-expect-error
-    condition.data[dataDBTabel.SERY_CTO.id as string] = props.seri;
+    condition.data[dataDBTabel.SERY_CTO.id as string] = props.seri; 
     //@ts-expect-error
     condition.data[dataDBTabel.LOAI_BCS.id as string] = props.BCSCMIS;
     //@ts-expect-error
@@ -200,7 +200,7 @@ export async function onExportFromServerPress() {
         state.isBusy = true;
         return { ...state };
       });
-      const repository = await KHCMISRepository.findAll();
+      const repository = await InfoMeterRepository.findAll();
 
       total = repository.length;
 

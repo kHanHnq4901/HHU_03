@@ -39,8 +39,6 @@ export function Header(props?: DrawerHeaderProps) {
   const navigation = useNavigation<DrawerNavigationProp<DrawerParamsList>>();
   const currentRouteName = navigationRef?.isReady()
     ? navigationRef.getCurrentRoute()?.name
-
-    
     : 'Home';
 
   // Các màn hình được xem là "Home"
@@ -94,12 +92,7 @@ export function Header(props?: DrawerHeaderProps) {
           <TouchableOpacity onPress={() => navigation.openDrawer()}>
             <Avatar.Image
               size={40 * scale}
-              source={
-                (store.state.appSetting.loginMode === 'NPC' ||
-                  store.state.appSetting.loginMode === 'ĐL Hà Nội')
-                  ? require('../../asset/images/icon/user.png')
-                  : require('../../asset/images/icon/rf.jpg')
-              }
+              source={require('../../asset/images/icon/user.png')}
               style={{ elevation: 5, marginLeft: 5, zIndex: 100 }}
             />
           </TouchableOpacity>

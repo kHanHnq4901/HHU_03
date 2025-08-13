@@ -1,8 +1,9 @@
 import Geolocation from '@react-native-community/geolocation';
-import React, { useContext, useState } from 'react';
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { EmitterSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import * as permission from 'react-native-permissions';
 import {
+  requestBluetoothPermissions,
   requestPermissionBleConnectAndroid,
   requestPermissionGPSAndroid,
   requestPermissionGPSIos,
@@ -12,7 +13,15 @@ import { PropsStore, storeContext } from '../../store';
 import BleManager from 'react-native-ble-manager';
 import { onScanPress } from './handleButton';
 import { showAlert } from '../../util';
-
+import { StackNavigationProp } from '@react-navigation/stack';
+import { StackRootParamsList } from '../../navigation/model/model';
+import RNAndroidLocationEnabler from 'react-native-android-location-enabler';
+import {
+  connectLatestBLE,
+  handleUpdateValueForCharacteristic,
+  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
+  initModuleBle,
+} from '../../service/hhu/bleHhuFunc';
 var LocationEnabler =
   Platform.OS === 'android' ? require('react-native-location-enabler') : null;
 
@@ -47,16 +56,6 @@ export const hookProps = {} as HookProps;
 
 export let store = {} as PropsStore;
 
-const {
-  PRIORITIES: { HIGH_ACCURACY },
-  useLocationSettings,
-} =
-  Platform.OS === 'android'
-    ? LocationEnabler.default
-    : {
-        PRIORITIES: { HIGH_ACCURACY: null },
-        useLocationSettings: null,
-      };
 
 const BleManagerModule = NativeModules.BleManager;
 export const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -107,19 +106,6 @@ export const GetHookProps = (): HookProps => {
 
   store = useContext(storeContext) as PropsStore;
 
-  if (Platform.OS === 'android') {
-    const [enabled, requestResolution] = useLocationSettings(
-      {
-        priority: HIGH_ACCURACY, // default BALANCED_POWER_ACCURACY
-        alwaysShow: true, // default false
-        needBle: true, // default false
-      },
-      false /* optional: default undefined */,
-    );
-
-    enableLocationHook.enabled = enabled;
-    enableLocationHook.requestResolution = requestResolution;
-  }
 
   return hookProps;
 };
@@ -142,7 +128,7 @@ export const setStatus = (status: string) => {
   });
 };
 
-const handleDidUpdateState = obj => {
+const handleDidUpdateState = (obj: { state: any; }) => {
   console.log('handleDidUpdateState:', obj.state);
   // const state = obj.state;
   // if (state === 'on') {
@@ -160,8 +146,12 @@ const handleDidUpdateState = obj => {
   // }
 };
 
-const handleDiscoverPeripheral = peripheral => {
-  const peripherals = new Map();
+const handleDiscoverPeripheral = (peripheral: any) => {
+  // Tạo Map từ list hiện tại
+  const peripherals = new Map(
+    hookProps.state.ble.listNewDevice.map(itm => [itm.id, itm])
+  );
+
   let res = peripheral as {
     advertising: {
       isConnectable: boolean;
@@ -174,107 +164,75 @@ const handleDiscoverPeripheral = peripheral => {
     name: null | string;
     rssi: number;
   };
-  // console.log('res:', res);
-  if (res.name && res.advertising.isConnectable) {
-    hookProps.state.ble.listNewDevice.forEach(itm => {
-      peripherals.set(itm.id, { name: itm.name, id: itm.id, rssi: itm.rssi });
+
+  // Chỉ lưu thiết bị có tên & có thể kết nối
+  if (res.name && res.advertising?.isConnectable) {
+    peripherals.set(res.id, { 
+      name: res.name, 
+      id: res.id, 
+      rssi: res.rssi 
     });
-    peripherals.set(res.id, { name: res.name, id: res.id, rssi: res.rssi });
 
     hookProps.setState(state => {
       state.ble.listNewDevice = Array.from(peripherals.values());
       return { ...state };
     });
-    //refScroll.current.scrollToEnd({ animated: true });
-    //refScroll.current.scrollTo({ x: 0, y: 0, animated: true });
+
+    console.log("Thiết bị mới:", res.name, res.id, res.rssi);
   }
 };
 
-let listenerStopScan;
-let listenerDiscover;
-
-export const onInit = async navigation => {
+export const onInit = async (navigation: StackNavigationProp<StackRootParamsList>) => {
   try {
+    // Cấu hình GPS
     Geolocation.setRNConfiguration({
       skipPermissionRequests: false,
       authorizationLevel: 'whenInUse',
       locationProvider: 'playServices',
     });
-    Geolocation.requestAuthorization(
-      () => {
-        console.log('requestAuthorization succeed');
-        // if (!intervalGPS) {
-        //   intervalGPS = setInterval(() => {
-        //     getGeolocation();
-        //   }, 7000);
-        // }
-      },
-      error => {
-        console.log(error);
-      },
-    );
-    let requestScanPermission = await requestPermissionScan();
-    let requestPermissionGps = await requestGps();
-    if (requestScanPermission === true && requestPermissionGps === true) {
-      if(Platform.OS === 'android')
-      {
+    Geolocation.requestAuthorization();
+
+    // Xin quyền Bluetooth
+    const requestScanPermission = await requestBluetoothPermissions();
+    if (requestScanPermission) {
+      if (Platform.OS === 'android') {
         await BleManager.start({ showAlert: false });
       }
-      
-      let isEnable: boolean = await BleManager.enableBluetooth();
-      if (isEnable === true) {
+
+      try {
+        await BleManager.enableBluetooth(); // Không throw nghĩa là đã bật Bluetooth
+
         if (Platform.OS === 'android') {
-          console.log('get list bond device');
-          let list = await BleManager.getBondedPeripherals();
+          const list = await BleManager.getBondedPeripherals();
           hookProps.setState(state => {
-            state.ble.listBondedDevice.length = 0;
-            list.forEach(item => {
-              state.ble.listBondedDevice.push({
-                id: item.id,
-                isConnectable: item.advertising.isConnectable,
-                name: item.name ?? '',
-              });
-            });
+            state.ble.listBondedDevice = list.map(item => ({
+              id: item.id,
+              isConnectable: item.advertising?.isConnectable ?? false,
+              name: item.name ?? '',
+            }));
             return { ...state };
           });
         }
-      } else {
+      } catch {
         showAlert('Thiết bị cần được bật bluetooth');
       }
     }
-    console.log('abc...');
 
-    listenerStopScan = bleManagerEmitter.addListener(
-      'BleManagerStopScan',
-      handleStopScan,
+    BleManager.onDiscoverPeripheral(handleDiscoverPeripheral);
+    BleManager.onStopScan(handleStopScan);
+    BleManager.onDidUpdateValueForCharacteristic(
+      handleUpdateValueForCharacteristic
     );
-    listenerDiscover = bleManagerEmitter.addListener(
-      'BleManagerDiscoverPeripheral',
-      handleDiscoverPeripheral,
-    );
-    // bleManagerEmitter.addListener(
-    //   'BleManagerDidUpdateState',
-    //   handleDidUpdateState,
-    // );
-
-    navigation.addListener('focus', () => {
-      onScanPress();
-    });
-    navigation.addListener('beforeRemove', () => {
-      BleManager.stopScan();
-    });
     setStatus('');
-  } catch (err :any) {
-    setStatus('Lỗi: ' + JSON.stringify(err.message));
+  } catch (err: any) {
+    setStatus('Lỗi: ' + err.message);
   }
 };
 
 export const onDeInit = () => {
-  if (listenerStopScan && listenerDiscover) {
-    listenerStopScan.remove();
-    listenerDiscover.remove();
-  }
+
 };
+
 
 type PropsListBondBle = {
   advertising: {

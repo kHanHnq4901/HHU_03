@@ -49,7 +49,7 @@ export const requestGps = async (): Promise<boolean> => {
           //   'requestResolution:',
           //   enableLocationHook.requestResolution,
           // );
-          enableLocationHook.requestResolution();
+          //enableLocationHook.requestResolution();
           return true;
         } else {
         }

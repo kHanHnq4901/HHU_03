@@ -1,42 +1,44 @@
 import React from 'react';
-import {
-  View,
-  StatusBar,
-  StyleSheet,
-  Platform,
-  ViewStyle,
-  StatusBarStyle,
-} from 'react-native';
-import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
+import { Platform, StatusBar, StyleSheet, View } from 'react-native';
+import { EdgeInsets, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   backgroundColor?: string;
-  barStyle?: StatusBarStyle;
+  barStyle?: 'dark-content' | 'light-content';
 };
 
 export let MARGIN_TOP = 0;
+
 export let SAFE_AREA_INSET = {} as EdgeInsets;
 
-export function CustomStatusBar({ backgroundColor = 'white', barStyle = 'dark-content' }: Props) {
-  const insets = useSafeAreaInsets();
-  SAFE_AREA_INSET = insets;
-
-  // Trên Android: Nếu không có notch, đảm bảo có ít nhất 24
-  MARGIN_TOP = Platform.OS === 'android' ? Math.max(insets.top, 24) : insets.top;
-
+export function CustomStatusBar(props: Props) {
+  const safeAreaInsets = useSafeAreaInsets();
+  MARGIN_TOP = safeAreaInsets.top < 24 ? 24 : safeAreaInsets.top;
+  SAFE_AREA_INSET = safeAreaInsets;
   return (
-    <View style={[styles.statusBar, { height: MARGIN_TOP, backgroundColor }]}>
+    <View
+      style={{
+        ...styles.container,
+        height: MARGIN_TOP,
+        backgroundColor: props.backgroundColor ?? 'white',
+        //backgroundColor: 'white',
+      }}>
       <StatusBar
         translucent
-        backgroundColor="transparent"
-        barStyle={barStyle}
+        barStyle={props.barStyle ?? 'dark-content'}
+        backgroundColor={props.backgroundColor ?? 'white'}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  statusBar: {
-    width: '100%',
-  } as ViewStyle,
+  container: {
+    // position: 'absolute',
+    // top: 0,
+    // left: 0,
+    // right: 0,
+    // height: STATUS_BAR_HEIGHT,
+    // backgroundColor: 'white',
+  },
 });

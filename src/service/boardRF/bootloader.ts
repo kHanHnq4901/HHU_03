@@ -210,7 +210,7 @@ export const SendFlashPage = async (): Promise<boolean> => {
       let bResult = await hhuFunc_Send(hhuHeader, buff);
       if (bResult === true) {
         console.log('wait ...');
-        bResult = await analysisRx(respond, 4000);
+        bResult = await analysisRx(respond, 10000);
         console.log('wait bResult:', bResult);
         if (bResult) {
           if (respond.hhuHeader.u8Cmd === TYPE_HHU_CMD.ACK) {

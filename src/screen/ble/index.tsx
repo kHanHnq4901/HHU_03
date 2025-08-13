@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Platform,
   ScrollView,
@@ -6,213 +6,217 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import IconAnt from 'react-native-vector-icons/AntDesign';
-import IconFontAwesome from 'react-native-vector-icons/FontAwesome';
-
+import IconFA from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Caption } from 'react-native-paper';
-import { StackRootParamsList } from '../../navigation/model/model';
 import { Colors, normalize } from '../../theme';
 import {
   GetHookProps,
   PropsItemBle,
   hookProps,
-  onDeInit,
+  store,
   onInit,
-  store
+  onDeInit
 } from './controller';
-import { connectHandle, disConnect, onScanPress } from './handleButton';
+import { connectHandle, onScanPress } from './handleButton';
+import { StackRootParamsList } from '../../navigation/model/model';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  connectLatestBLE,
+  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
+  initModuleBle,
+} from '../../service/hhu/bleHhuFunc';
+import { hhuHandleDisconnectedPeripheral } from '../../component/drawer/drawerContent/controller';
+import BleManager from 'react-native-ble-manager';
+// Component hiển thị từng thiết bị
+const BleItem = (props: PropsItemBle & { statusLabel?: string }) => {
+  const isConnected = props.id === store?.state.hhu.idConnected;
 
-const TAG = 'BleScreen:';
-
-const BleItem = (props: PropsItemBle) => {
   return (
     <TouchableOpacity
-      onPress={() => {
-        connectHandle(props.id, props.name);
-      }}
-      style={styles.containerItem}
-      onLongPress={() => {
-        disConnect(props.id);
-      }}>
-      <View style={styles.row}>
-        <Text style={{ ...styles.titleItem, maxWidth: '90%' }}>
-          {props.name}
+      style={[
+        styles.deviceCard,
+        isConnected && { borderLeftColor: '#4CAF50', borderLeftWidth: 4 }
+      ]}
+      onPress={() => connectHandle(props.id, props.name)} // GỌI KHI ẤN
+    >
+      {/* Icon */}
+      <View
+        style={[
+          styles.iconCircle,
+          isConnected ? { backgroundColor: '#4CAF50' } : { backgroundColor: Colors.primary }
+        ]}
+      >
+        <IconFA name="bluetooth" size={20} color="#fff" />
+      </View>
+
+      {/* Thông tin */}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.deviceName} numberOfLines={1}>
+          {props.name || 'Không tên'}
         </Text>
-        <View style={styles.rowNormal}>
-          <IconFontAwesome
-            name="bluetooth"
-            size={25}
-            color={
-              props.id === store?.state.hhu.idConnected ? '#5fe321' : '#ad0c0c'
-            }
-          />
+        <Text style={styles.deviceId} numberOfLines={1}>
+          ID: {props.id}
+        </Text>
+      </View>
+
+      {/* RSSI */}
+      {props.rssi !== undefined && (
+        <View style={styles.rssiContainer}>
+          <IconAnt name="wifi" size={16} color="#007bff" />
+          <Text style={styles.rssiText}>{props.rssi} dBm</Text>
         </View>
-      </View>
-      <View style={styles.row}>
-        <Caption style={styles.caption}>{props.id}</Caption>
-        {props.rssi && (
-          <View style={styles.containerRssi}>
-            <Text style={styles.rssi}>
-              {props.rssi}
-              {' dbm'}
-            </Text>
-          </View>
-        )}
-      </View>
+      )}
     </TouchableOpacity>
   );
 };
 
-//const BleItemMemorize = React.memo(BleItem, (prev, next) => next.id !== );
-
+// Màn hình chính
 export const SetUpBleScreen = () => {
   GetHookProps();
-
   const navigation = useNavigation<StackNavigationProp<StackRootParamsList>>();
-
-  React.useEffect(() => {
+  useEffect(() => {
     onInit(navigation);
-    return () => {
-      onDeInit();
-    };
+    return () => onDeInit();
   }, []);
-
-  //const refScroll = useRef<any>({});
-
+  
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-    <View style={{ flex: 1, paddingHorizontal: 10, marginTop: 10 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          marginVertical: 5,
-          // backgroundColor: 'pink',
-          // marginTop: 70,
-
-          paddingHorizontal: 8,
-        }}>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          onPress={onScanPress}
-          style={{
-            flexDirection: 'row',
-            backgroundColor: '#ede8e9',
-            padding: 10,
-            borderRadius: 15,
-          }}>
-          <Text style={{ fontSize: 20, marginRight: 10, color: Colors.text }}>
-            {hookProps.state.ble.isScan ? 'Đang tìm kiếm ...' : 'Tìm kiếm'}
-          </Text>
-          <IconAnt name="search1" size={35} color="#f70f3c" />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.status}>{hookProps.state.status}</Text>
-
-     
+    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
+      >
+        {/* Đang kết nối */}
         {store.state.hhu.connect === 'CONNECTED' && (
           <>
-            <Text style={{ ...styles.title, marginBottom: 10 }}>
-              Thiết bị đang kết nối:
-            </Text>
-          
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <MCIcon name="link-variant" size={20} color="#007AFF" />
+              <Text style={styles.sectionTitle}>Đang kết nối</Text>
+            </View>
             <BleItem
               id={store.state.hhu.idConnected as string}
               name={store.state.hhu.name as string}
-              rssi={
-                store.state.hhu.rssi === 0 ? undefined : store.state.hhu.rssi
-              }
+              rssi={store.state.hhu.rssi === 0 ? undefined : store.state.hhu.rssi}
+              statusLabel="Kết nối thành công"
             />
-      
           </>
         )}
-         
-        {
-          Platform.OS === 'android' && (
-            <>
-        <Text style={{ ...styles.title, marginBottom: 10, marginTop: 25 }}>
-          Thiết bị của bạn:
-        </Text>
-        {hookProps.state.ble.listBondedDevice.map((item, index) => {
-          return <BleItem key={item.id} id={item.id} name={item.name} />;
-        })}
-        </>
-          )
-        }
-         
-        <Text style={{ ...styles.title, marginBottom: 10 }}>
-          Thiết bị khả dụng:
-        </Text>
-    
-            {hookProps.state.ble.listNewDevice.map((item, index) => {
-              return (
-                <BleItem
-                  key={item.id}
-                  id={item.id}
-                  name={item.name}
-                  rssi={item.rssi}
-                />
-                
-              );
-            })}
-      
-      
-   
+        <Text style={styles.sectionTitle}>📡 Thiết bị khả dụng : {hookProps.state.status}</Text>
+        {/* Khả dụng */}
+        {hookProps.state.ble.listNewDevice.length > 0 && (
+          <>
+
+            {hookProps.state.ble.listNewDevice.map((item) => (
+              <BleItem
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                rssi={item.rssi}
+                statusLabel="Chưa kết nối"
+              />
+            ))}
+          </>
+        )}
+
+        {/* Đã từng kết nối */}
+        {hookProps.state.ble.listBondedDevice?.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>🔗 Thiết bị đã từng kết nối</Text>
+            {hookProps.state.ble.listBondedDevice.map((item) => (
+              <BleItem
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                rssi={item.rssi}
+                statusLabel="Đã kết nối trước đây"
+              />
+            ))}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Nút quét nổi */}
+      <TouchableOpacity
+        onPress={onScanPress}
+        style={styles.fab}
+      >
+        {hookProps.state.ble.isScan ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <IconAnt name="search1" size={22} color="#fff" />
+        )}
+      </TouchableOpacity>
     </View>
-    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  title: {
+  sectionTitle: {
     fontSize: 15,
+    fontWeight: 'bold',
     color: Colors.text,
-     fontWeight: 'bold',
+    marginBottom: 6
   },
-  titleItem: {
-    fontSize: 20,
-    color: Colors.text,
-  },
-  row: {
+  deviceCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
-  },
-  containerItem: {
-    paddingVertical: 5,
-    marginVertical: 5,
-    backgroundColor: '#ede8e9',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
     borderRadius: 10,
-    paddingHorizontal: 15,
-    elevation: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 }
   },
-  caption: {
-    color: 'green',
-  },
-  status: {
-    fontSize: normalize(18),
-    color: Colors.primary,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    marginVertical: 5,
-  },
-  rowNormal: {
-    flexDirection: 'row',
-  },
-  containerRssi: {
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 10,
-    borderRadius: 20,
-    // backgroundColor: Colors.secondary,
+    marginRight: 10
   },
-  rssi: {
-    padding: 5,
-    fontSize: normalize(14),
-    color: Colors.text,
+  deviceName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text
   },
+  deviceId: {
+    fontSize: 12,
+    color: '#777'
+  },
+  deviceStatus: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 2
+  },
+  rssiContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8
+  },
+  rssiText: {
+    fontSize: 12,
+    color: '#007bff',
+    marginLeft: 4
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: Colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5
+  }
 });

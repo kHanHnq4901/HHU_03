@@ -1,5 +1,5 @@
 import { PropsXmlReturnFromFile } from '.';
-import { KHCMISRepository } from '../database/repository';
+import { InfoMeterRepository } from '../database/repository';
 import { SOAP_DANH_SACH_BIEU_DLHN_TYPE } from '../service/api/serverData';
 import xml2js, { parseString } from 'react-native-xml2js';
 
@@ -167,7 +167,7 @@ export const exportDB2XmlDLHN = async (
     Table1: [],
   };
 
-  const dataDB = await KHCMISRepository.findAll();
+  const dataDB = await InfoMeterRepository.findAll();
   if (dataDB.length === 0) {
     return null;
   }

@@ -1,7 +1,7 @@
 import * as Ble from '../../util/ble';
 import AsyncStorage from '@react-native-community/async-storage';
 import { Buffer } from 'buffer';
-import { HhuObj, ObjSend, readVersion, ShakeHand } from './hhuFunc';
+import { HhuObj, ObjSend, readVersion, ShakeHand, waitHHU } from './hhuFunc';
 import {
   BufferToString,
   ByteArrayToString,
@@ -9,10 +9,12 @@ import {
   showToast,
   sleep,
 } from '../../util';
-import BleManager from 'react-native-ble-manager';
+import BleManager from 'react-native-ble-plx';
 import { PropsStore } from '../../store';
 import { checkUpdateHHU } from '../api';
 import { Platform } from 'react-native';
+import { bleManagerEmitter } from '../../screen/ble/controller';
+import { manager } from '../../screen/ble/handleButton';
 
 const KEY_STORAGE = 'BLE_INFO';
 const TAG = 'Ble Func:';
@@ -40,38 +42,36 @@ type PropsBleInfo = {
 // };
 
 export const BleFunc_StartNotification = async (id: string) => {
-  console.log('start notification');
   await Ble.startNotification(id);
 };
 
 export const BleFunc_StopNotification = async (id: string) => {
-  console.log('stop notification');
   await Ble.stopNotification(id);
 };
 
-export const BleFunc_Send = async (id: string, data: any[]) => {
+export const BleFunc_Send = async (id: string, data: number[]) => {
   try {
-    let dumy: any[] = [];
-    dumy.push(0xfe);
-    dumy.push(0xfe);
-    dumy.push(data.length & 0xff);
-    dumy.push((data.length >> 8) & 0xff);
-    dumy.push((dumy[2] + dumy[3]) & 0xff);
-    //await Ble.send(id, dumy);
-    //await Ble.send(id, dumy);
 
+    let dumy: number[] = [];
+
+    dumy.push(0xfe); // Byte 1
+    dumy.push(0xfe); // Byte 2
+    dumy.push(data.length & 0xff); // Low byte của length
+    dumy.push((data.length >> 8) & 0xff); // High byte của length
+    dumy.push((dumy[2] + dumy[3]) & 0xff); // Checksum length
+
+    // Payload
     for (let i = 0; i < data.length; i++) {
       dumy.push(data[i]);
     }
 
-    await Ble.send(id, dumy);
+    await Ble.send(id,dumy);
 
-    //console.log(dumy);
-    // console.log(data);
   } catch (err: any) {
-    console.log(err);
+    console.error(err);
   }
 };
+
 
 export const BleFunc_SaveStorage = async (id: string) => {
   const item: PropsBleInfo = {
@@ -92,7 +92,7 @@ export const BleFunc_TryConnectToLatest = async (): Promise<{
     const resString = await AsyncStorage.getItem(KEY_STORAGE);
     if (resString) {
       const data = JSON.parse(resString) as PropsBleInfo;
-      let result;
+      let result: boolean = false; // hoặc true tùy logic
 
       console.log('try connect to data.id: ', data.id);
       // if (Platform.OS === 'ios') {
@@ -114,16 +114,16 @@ export const BleFunc_TryConnectToLatest = async (): Promise<{
 
       return { result: result, id: data.id };
     } else {
-      return { result: false, id: null };
+      return { result: false, id: '' };
     }
   } catch (err: any) {
     console.log(TAG, String(err) + new Error().stack);
   }
-  return { result: false, id: null };
+  return { result: false, id: '' };
 };
 
 export async function initModuleBle() {
-  await BleManager.start({ showAlert: false });
+  await manager.state({ showAlert: false });
 }
 
 export const connectLatestBLE = async (store: PropsStore) => {
@@ -135,30 +135,52 @@ export const connectLatestBLE = async (store: PropsStore) => {
   });
 
   let isEnable = true;
-    try {
-      await BleManager.enableBluetooth();
-    } catch (error) {
-      isEnable = false;
+
+  try {
+    if (Platform.OS === 'android') {
+      await manager.enable; // Android: bật bluetooth
+    } else {
+      //manager.checkState(); // iOS: check trạng thái
+
+      const statePromise = new Promise<boolean>((resolve) => {
+        const sub = bleManagerEmitter.addListener(
+          'BleManagerDidUpdateState',
+          ({ state }) => {
+            console.log('iOS Bluetooth State:', state);
+            sub.remove(); // remove listener sau khi nhận được trạng thái
+            resolve(state === 'on');
+          }
+        );
+
+        // fallback timeout nếu không có phản hồi
+        setTimeout(() => {
+          sub.remove();
+          resolve(false); // assume off nếu không có phản hồi
+        }, 3000);
+      });
+
+      isEnable = await statePromise;
+    }
+  } catch (error) {
+    console.log(TAG, 'Bluetooth check failed', error);
+    isEnable = false;
   }
-  if (isEnable !== true) {
+
+  if (!isEnable) {
     store.setState(state => {
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
-    //if (Platform.OS === 'android')
-    showAlert('Thiết bị chưa được bật bluetooth');
+    showAlert('Thiết bị chưa được bật Bluetooth');
     return;
   }
+
   showToast('Đang thử kết nối với thiết bị Bluetooth trước đó ...');
-  let data = await BleFunc_TryConnectToLatest();
-  console.log('k');
+  const data = await BleFunc_TryConnectToLatest();
+  console.log(TAG, 'Kết quả kết nối:', data);
+
   if (data.result) {
     let rssi: number = 0;
-    // try {
-    //   rssi = await BleManager.getRssi(data.id);
-    // } catch (err: any) {
-    //   console.log(TAG, err.message);
-    // }
 
     store.setState(state => {
       state.hhu.connect = 'CONNECTED';
@@ -166,52 +188,56 @@ export const connectLatestBLE = async (store: PropsStore) => {
       state.hhu.rssi = rssi;
       return { ...state };
     });
+
     ObjSend.id = data.id;
-    let result;
+    ObjSend.isShakeHanded = false;
+
     for (let k = 0; k < 2; k++) {
       await sleep(500);
-      result = await ShakeHand();
+      const result = await ShakeHand();
       if (result === true || result === 1) {
         ObjSend.isShakeHanded = true;
         break;
-      } else {
-        ObjSend.isShakeHanded = false;
       }
-
-      console.log('Try shakehand');
+      console.log(TAG, 'Try shakehand lần', k + 1);
     }
-    if (ObjSend.isShakeHanded === false) {
-      console.log('ShakeHand failed. Disconnect');
-      showToast('ShakeHand failed. Disconnect');
-      await BleManager.disconnect(ObjSend.id, true);
-    } else {
-      showToast('Bắt tay thành công');
-      if (result === true) {
-        for (let k = 0; k < 2; k++) {
-          await sleep(500);
-          const version = await readVersion();
-          if (version) {
-            let arr = version.split('.');
-            arr.length = 2;
 
-            const shortVersion = arr
-              .join('.')
-              .toLocaleLowerCase()
-              .replace('v', '');
-            store.setState(state => {
-              state.hhu.version = version;
-              state.hhu.shortVersion = shortVersion;
-              return { ...state };
-            });
-            console.log('Read version succeed:' + version);
-            console.log('Short version:' + shortVersion);
-            checkUpdateHHU();
-            break;
-          } else {
-            console.log('Read version failed');
-            console.log('Try read version');
-          }
-        }
+    if (!ObjSend.isShakeHanded) {
+      console.log(TAG, 'ShakeHand thất bại. Ngắt kết nối');
+      showToast('ShakeHand thất bại. Đã ngắt kết nối');
+      await manager.disable(ObjSend.id);
+      store.setState(state => {
+        state.hhu.connect = 'DISCONNECTED';
+        return { ...state };
+      });
+      return;
+    }
+
+    showToast('Bắt tay thành công');
+
+    // đọc version
+    for (let k = 0; k < 2; k++) {
+      await sleep(500);
+      const version = await readVersion();
+      if (version) {
+        const shortVersion = version
+          .split('.')
+          .slice(0, 2)
+          .join('.')
+          .toLowerCase()
+          .replace('v', '');
+
+        store.setState(state => {
+          state.hhu.version = version;
+          state.hhu.shortVersion = shortVersion;
+          return { ...state };
+        });
+
+        console.log(TAG, 'Read version succeed:', version);
+        checkUpdateHHU();
+        break;
+      } else {
+        console.log(TAG, 'Read version failed. Thử lại...');
       }
     }
   } else {
@@ -219,16 +245,15 @@ export const connectLatestBLE = async (store: PropsStore) => {
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
-    console.log(TAG + 'hhu:', data);
-    showToast('Kết nối bluetooth thất bại');
+
+    console.log(TAG, 'Kết nối thất bại:', data);
+    showToast('Kết nối Bluetooth thất bại');
   }
 };
 
 export const handleUpdateValueForCharacteristic = (data: any[]) => {
-  //console.log('data update for characteristic:', data.value);
-  // console.log('Rec ' + Date.now());
-  // console.log(ByteArrayToString(data.value, 16, true));
-  const receiveData = data.value as number[];
+  console.log('handleUpdateValueForCharacteristic');
+  const receiveData = data.values as unknown as number[];
 
   for (let i = 0; i < receiveData.length; i++) {
     const rxData = receiveData[i] & 0xff;
@@ -274,12 +299,6 @@ export const handleUpdateValueForCharacteristic = (data: any[]) => {
 
       HhuObj.countRec = (HhuObj.countRec + 1) % HhuObj.buffRx.byteLength;
       if (HhuObj.countRec === HhuObj.identityFrame.u16Length) {
-        // console.log('Rec a frame: ' + HhuObj.countRec + ' bytes:');
-        // const arrb = [];
-        // for (let k = 0; k < HhuObj.countRec; k++) {
-        //   arrb.push(HhuObj.buffRx[k]);
-        // }
-        // console.log(ByteArrayToString(arrb, 16, true));
         HhuObj.flag_rec = true;
         HhuObj.identityFrame.bActive = false;
       }

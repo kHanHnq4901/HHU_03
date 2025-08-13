@@ -2,7 +2,7 @@ import { Dimensions, PixelRatio, Platform } from 'react-native';
 import StyleCommon from './styleCommon';
 import Color from 'color';
 export const Colors = {
-  primary: '#f71336',
+  primary: '#355AA5',
   secondary: '#0ef76c',
   tertiary: 'white',
   backgroundIcon: '#e6ebeb',

@@ -5,152 +5,65 @@ type PropsCell = {
 };
 
 type PropsTable = {
-  TT: PropsCell;
-  MA_KHANG: PropsCell;
-  MA_DDO: PropsCell;
-  MA_DVIQLY: PropsCell;
-  MA_QUYEN: PropsCell;
-  MA_TRAM: PropsCell;
-  LOAI_BCS: PropsCell;
-  TEN_KHANG: PropsCell;
-  DIA_CHI: PropsCell;
-  MA_CTO: PropsCell;
-  SERY_CTO: PropsCell;
-  CS_CU: PropsCell;
-  SL_CU: PropsCell;
-  SL_TTIEP: PropsCell;
-  NGAY_CU: PropsCell;
-  CS_MOI: PropsCell;
-  SL_MOI: PropsCell;
-  KY: PropsCell;
-  THANG: PropsCell;
-  NAM: PropsCell;
-  NGAY_MOI: PropsCell;
-  SL_THAO: PropsCell;
-  MA_COT: PropsCell;
-  PMAX: PropsCell;
-  NGAY_PMAX: PropsCell;
-  RF: PropsCell;
-  LoaiDoc: PropsCell;
-  GhiChu: PropsCell;
-  X: PropsCell;
-  Y: PropsCell;
-  loginMode: PropsCell;
-  isSent: PropsCell;
-  latitude: PropsCell;
-  longtitude: PropsCell;
-  image: PropsCell;
-  hasImage: PropsCell;
+  METER_NO: PropsCell;
+  METER_NAME: PropsCell;
+  METER_MODEL_DESC: PropsCell;
+  MODULE_NO: PropsCell;
+  CUSTOMER_CODE : PropsCell;
+  CUSTOMER_NAME : PropsCell;
+  ADDRESS : PropsCell ; 
+  PHONE : PropsCell ; 
+  EMAIL : PropsCell ; 
+  CREATED : PropsCell ;
+  LINE_NAME : PropsCell ;
+  COORDINATE : PropsCell ; 
+  LINE_ID : PropsCell;
+  METER_MODEL_ID: PropsCell;
+  
 };
 
 export const dataDBTabel: PropsTable = {
-  TT: {
-    id: 'TT',
+  METER_NO: {
+    id: 'METER_NO',
   },
-  MA_KHANG: {
-    id: 'MA_KHANG',
+  METER_NAME: {
+    id: 'METER_NAME',
   },
-  MA_DDO: {
-    id: 'MA_DDO',
+  METER_MODEL_DESC: {
+    id: 'METER_MODEL_DESC',
   },
-  MA_DVIQLY: {
-    id: 'MA_DVIQLY',
+  MODULE_NO: {
+    id: 'MODULE_NO',
   },
-  MA_QUYEN: {
-    id: 'MA_QUYEN',
+  CUSTOMER_CODE: {
+    id: 'CUSTOMER_CODE',
   },
-  MA_TRAM: {
-    id: 'MA_TRAM',
+  CUSTOMER_NAME: {
+    id: 'CUSTOMER_NAME',
   },
-  LOAI_BCS: {
-    id: 'LOAI_BCS',
+  ADDRESS: {
+    id: 'ADDRESS',
   },
-  TEN_KHANG: {
-    id: 'TEN_KHANG',
+  PHONE: {
+    id: 'PHONE',
   },
-  DIA_CHI: {
-    id: 'DIA_CHI',
+  EMAIL: {
+    id: 'EMAIL',
   },
-  MA_CTO: {
-    id: 'MA_CTO',
+  CREATED: {
+    id: 'CREATED',
   },
-  SERY_CTO: {
-    id: 'SERY_CTO',
+  LINE_NAME: {
+    id: 'LINE_NAME',
   },
-  CS_CU: {
-    id: 'CS_CU',
+  COORDINATE: {
+    id: 'COORDINATE',
   },
-  SL_CU: {
-    id: 'SL_CU',
+  LINE_ID: {
+    id: 'LINE_ID',
   },
-  SL_TTIEP: {
-    id: 'SL_TTIEP',
-  },
-  NGAY_CU: {
-    id: 'NGAY_CU',
-  },
-  CS_MOI: {
-    id: 'CS_MOI',
-  },
-  SL_MOI: {
-    id: 'SL_MOI',
-  },
-  KY: {
-    id: 'KY',
-  },
-  THANG: {
-    id: 'THANG',
-  },
-  NAM: {
-    id: 'NAM',
-  },
-  NGAY_MOI: {
-    id: 'NGAY_MOI',
-  },
-  SL_THAO: {
-    id: 'SL_THAO',
-  },
-  MA_COT: {
-    id: 'MA_COT',
-  },
-  PMAX: {
-    id: 'PMAX',
-  },
-  NGAY_PMAX: {
-    id: 'NGAY_PMAX',
-  },
-  RF: {
-    id: 'RF',
-  },
-  LoaiDoc: {
-    id: 'LoaiDoc',
-  },
-  GhiChu: {
-    id: 'GhiChu',
-  },
-  X: {
-    id: 'X',
-  },
-  Y: {
-    id: 'Y',
-  },
-  loginMode: {
-    id: 'loginMode',
-  },
-  isSent: {
-    id: 'isSent',
-  },
-  latitude: {
-    id: 'latitude',
-  },
-  longtitude: {
-    id: 'longtitude',
-  },
-  image: {
-    id: 'image',
-  },
-  hasImage: {
-    id: 'hasImage',
+  METER_MODEL_ID: {
+    id: 'METER_MODEL_ID',
   },
 };
 

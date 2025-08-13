@@ -8,8 +8,6 @@ import { TYPE_SUPPORT_NSX, hook, store } from './controller';
 export async function onSavePress() {
   console.log('save');
 
-  const item = hook.state.selectedSerVer;
-
   console.log('abc:', hook.state.appSetting.server);
   console.log('loginMode:', hook.state.appSetting.loginMode);
 
