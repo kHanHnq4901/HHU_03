@@ -264,6 +264,7 @@ export const ShakeHand = async (): Promise<boolean | 1> => {
     u16FSN: 0xffff,
     u16Length: pass.length,
   };
+  console.log ("ObjSend.id" + ObjSend.id)
   await BleFunc_StartNotification(ObjSend.id as string);
   let bResult: boolean = await hhuFunc_Send(header, pass);
 

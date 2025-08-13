@@ -25,13 +25,6 @@ import { connectHandle, onScanPress } from './handleButton';
 import { StackRootParamsList } from '../../navigation/model/model';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-  connectLatestBLE,
-  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
-  initModuleBle,
-} from '../../service/hhu/bleHhuFunc';
-import { hhuHandleDisconnectedPeripheral } from '../../component/drawer/drawerContent/controller';
-import BleManager from 'react-native-ble-manager';
 // Component hiển thị từng thiết bị
 const BleItem = (props: PropsItemBle & { statusLabel?: string }) => {
   const isConnected = props.id === store?.state.hhu.idConnected;

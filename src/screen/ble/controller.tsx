@@ -19,7 +19,6 @@ import RNAndroidLocationEnabler from 'react-native-android-location-enabler';
 import {
   connectLatestBLE,
   handleUpdateValueForCharacteristic,
-  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
   initModuleBle,
 } from '../../service/hhu/bleHhuFunc';
 var LocationEnabler =
@@ -220,9 +219,14 @@ export const onInit = async (navigation: StackNavigationProp<StackRootParamsList
 
     BleManager.onDiscoverPeripheral(handleDiscoverPeripheral);
     BleManager.onStopScan(handleStopScan);
+
     BleManager.onDidUpdateValueForCharacteristic(
       handleUpdateValueForCharacteristic
     );
+
+    // BleManager.onDisconnectPeripheral((data: { peripheral: any; }) => {
+    //   console.log('Peripheral disconnected:', data.peripheral);
+    // });
     setStatus('');
   } catch (err: any) {
     setStatus('Lỗi: ' + err.message);

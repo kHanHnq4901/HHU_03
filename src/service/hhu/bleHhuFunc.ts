@@ -251,23 +251,30 @@ export const connectLatestBLE = async (store: PropsStore) => {
   }
 };
 
-export const handleUpdateValueForCharacteristic = (data: any[]) => {
-  console.log('handleUpdateValueForCharacteristic');
-  const receiveData = data.values as unknown as number[];
+export const handleUpdateValueForCharacteristic = (data: {
+  peripheral: string;
+  characteristic: string;
+  value: number[];
+}) => {
+  console.log('handleUpdateValueForCharacteristic' + data.value);
+
+  const receiveData = data.value; // chính là mảng byte từ thiết bị
 
   for (let i = 0; i < receiveData.length; i++) {
     const rxData = receiveData[i] & 0xff;
-    // Dbg_Print1("%ld-", rxData);
+
     if (HhuObj.identityFrame.bActive === false) {
       HhuObj.identityFrame.bActive = true;
       HhuObj.identityFrame.u8CountRecIdentity = 0;
       HhuObj.identityFrame.bIdentityFinish = false;
     }
+
     if (HhuObj.identityFrame.bIdentityFinish === false) {
       HhuObj.identityFrame.au8IdentityBuff[
         HhuObj.identityFrame.u8CountRecIdentity
       ] = rxData;
       HhuObj.identityFrame.u8CountRecIdentity++;
+
       if (
         HhuObj.identityFrame.u8CountRecIdentity ===
         HhuObj.identityFrame.au8IdentityBuff.length
@@ -296,8 +303,8 @@ export const handleUpdateValueForCharacteristic = (data: any[]) => {
       }
     } else if (HhuObj.identityFrame.bIdentityFinish === true) {
       HhuObj.buffRx[HhuObj.countRec] = rxData;
-
       HhuObj.countRec = (HhuObj.countRec + 1) % HhuObj.buffRx.byteLength;
+
       if (HhuObj.countRec === HhuObj.identityFrame.u16Length) {
         HhuObj.flag_rec = true;
         HhuObj.identityFrame.bActive = false;
@@ -305,3 +312,4 @@ export const handleUpdateValueForCharacteristic = (data: any[]) => {
     }
   }
 };
+

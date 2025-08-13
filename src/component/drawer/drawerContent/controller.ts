@@ -18,7 +18,6 @@ import { onReceiveSharingIntent } from '../../../service/event';
 import { UPDATE_FW_HHU } from '../../../service/event/constant';
 import {
   connectLatestBLE,
-  handleUpdateValueForCharacteristic,
   handleUpdateValueForCharacteristic as hhuHandleReceiveData,
   initModuleBle,
 } from '../../../service/hhu/bleHhuFunc';
@@ -67,7 +66,7 @@ function checkUpdateAppMobileInterval() {
 export const hhuHandleDisconnectedPeripheral = async (data: any) => {
   console.log('data disconnect peripheral:', data);
   store?.setState(state => {
-    state.hhu.idConnected = null;
+    state.hhu.idConnected = '';
     state.hhu.connect = 'DISCONNECTED';
     return { ...state };
   });
@@ -98,7 +97,7 @@ export const onInit = async (navigation: any) => {
       'onDidUpdateValueForCharacteristic'
     );
     hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
-      handleUpdateValueForCharacteristic
+      hhuHandleReceiveData
     );
   }
 

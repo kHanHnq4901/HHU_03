@@ -30,12 +30,12 @@ type PropsState = {
     serviceUUID: string;
     isConnected: boolean;
     connect: 'DISCONNECTED' | 'CONNECTED' | 'CONNECTING';
-    idConnected: string | null;
+    idConnected: string ;
     name :string ;
     version: string;
     shortVersion: string;
     rssi: number;
-    device: Device | null;
+    device: Device ;
   };
   net: {
     netconnected: boolean;

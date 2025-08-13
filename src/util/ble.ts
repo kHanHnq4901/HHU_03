@@ -1,12 +1,7 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
-import {
-  connectLatestBLE,
-  handleUpdateValueForCharacteristic,
-  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
-  initModuleBle,
-} from '../service/hhu/bleHhuFunc';
+import { Buffer } from 'buffer'; // cần import Buffer
 const TAG = 'Ble.ts:';
 
 let service: string ;
@@ -114,14 +109,17 @@ export const startNotification = async (idPeripheral: string) => {
   }
 };
 
-export const send = async (idPeripheral: string, data: any[]) => {
+export const send = async (idPeripheral: string, data: number[]) => {
   try {
-    //console.log('Service UUID: ', service);
-    //console.log('characteristic UUID: ', characteristic);
-
-    await BleManager.write(idPeripheral, service, characteristic, data);
-    const value = await BleManager.read(idPeripheral, service, characteristic);
-    console.log('Giá trị gửi đi:', toHexString(value));
+    BleManager.write(
+      idPeripheral, service, characteristic,data,50
+    )
+      .then(async () => {
+      })
+      .catch((error) => {
+        // Failure code
+        console.log(error);
+      });
   } catch (err: any) {
     console.log(TAG + 'here:', err);
   }
