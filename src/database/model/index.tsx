@@ -1,4 +1,4 @@
-import { PropsAddMoreEntity } from '../entity';
+
 
 type PropsCell = {
   id: keyof PropsTable;
@@ -19,7 +19,7 @@ type PropsTable = {
   COORDINATE : PropsCell ; 
   LINE_ID : PropsCell;
   METER_MODEL_ID: PropsCell;
-  
+  STATUS : PropsCell;
 };
 
 export const dataDBTabel: PropsTable = {
@@ -65,73 +65,9 @@ export const dataDBTabel: PropsTable = {
   METER_MODEL_ID: {
     id: 'METER_MODEL_ID',
   },
-};
-
-export type PropsKHCMISModel = {
-  MA_KHANG: string;
-  MA_QUYEN: string;
-  MA_TRAM: string;
-  LOAI_BCS: string;
-  TEN_KHANG: string;
-  DIA_CHI: string;
-  MA_CTO: string;
-  SERY_CTO: string;
-  CS_CU: number;
-  SL_CU: number;
-  SL_TTIEP: number;
-  CS_MOI: number;
-  SL_MOI: number;
-  NGAY_MOI: string;
-  MA_COT: string;
-  PMAX: number;
-  NGAY_PMAX: string;
-  X: string;
-  Y: string;
-  KY: string;
-  THANG: string;
-  NAM: string;
-  MA_DVIQLY: string;
-  MA_GC: string;
-  MA_NVGCS: string;
-} & Omit<PropsAddMoreEntity, 'image' | 'idFile'>;
-
-const dumy: PropsKHCMISModel = {
-  MA_KHANG: '',
-  MA_QUYEN: '',
-  MA_TRAM: '',
-  LOAI_BCS: '',
-  TEN_KHANG: '',
-  DIA_CHI: '',
-  MA_CTO: '',
-  SERY_CTO: '',
-  CS_CU: 0,
-  SL_CU: 0,
-  SL_TTIEP: 0,
-  CS_MOI: 0,
-  SL_MOI: 0,
-  NGAY_MOI: '',
-  MA_COT: '',
-  PMAX: 0,
-  NGAY_PMAX: '',
-  RF: '1',
-  LoaiDoc: '',
-  GhiChu: '',
-  X: '',
-  Y: '',
-  KY: '',
-  THANG: '',
-  NAM: '',
-  MA_DVIQLY: '',
-  MA_GC: '',
-  MA_NVGCS: '',
-  
-  TT: 0,
-  id: '',
-  loginMode: 'KH Lẻ',
-  isSent: '0',
-  latitude: '',
-  longtitude: '',
-  hasImage: '0',
+  STATUS: {
+    id: 'STATUS',
+  },
 };
 
 export type PropsTypeOf =
@@ -161,7 +97,7 @@ export type PropsPercentRead = {
   abnormalNegative: number;
 };
 
-const getFiledKHCMIS = (): string[] => {
+const getFiledMeter= (): string[] => {
   const fields: string[] = [];
   for (let i in dumy) {
     fields.push(i);
@@ -169,4 +105,4 @@ const getFiledKHCMIS = (): string[] => {
   return fields;
 };
 
-export const KHCMISModelFields = getFiledKHCMIS();
+export const MeterModelFields = getFiledMeter();

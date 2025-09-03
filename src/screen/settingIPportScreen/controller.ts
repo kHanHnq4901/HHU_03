@@ -20,7 +20,7 @@ export function UpdateHook() {
 
   const [state, setState] = React.useState<PropsState>({
     appSetting: { ...store.state.appSetting },
-    selectedSerVer: store.state.appSetting.loginMode,
+    selectedSerVer: store.state.appSetting.server.host,
   });
 
   state.appSetting.server = { ...state.appSetting.server };

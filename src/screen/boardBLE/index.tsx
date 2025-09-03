@@ -170,13 +170,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btn: {
-    marginVertical: 10,
-    width: '80%',
+    width: '90%',
+    height: 50,
     maxWidth: 350,
-    height: 45,
-    backgroundColor: '#f36784',
-    //backgroundColor: 'white',
-    elevation: 5,
   },
   textbtn: {
     //color: 'black',

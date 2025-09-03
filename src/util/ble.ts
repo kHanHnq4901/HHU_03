@@ -1,7 +1,8 @@
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
 import { Buffer } from 'buffer'; // cần import Buffer
+import { handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
 const TAG = 'Ble.ts:';
 
 let service: string ;
@@ -51,7 +52,7 @@ export const connect = async (id: string): Promise<boolean> => {
       console.log(TAG, err);
       console.log('aaa id:', id);
 
-      //Promise.reject(err);
+      return false;
     }
     await sleep(1000);
   }
@@ -96,7 +97,7 @@ export const startNotification = async (idPeripheral: string) => {
       idPeripheral, service, characteristic
     )
       .then(() => {
-       
+        
         console.log("Notification started");
       })
       .catch((error) => {
@@ -111,17 +112,19 @@ export const startNotification = async (idPeripheral: string) => {
 
 export const send = async (idPeripheral: string, data: number[]) => {
   try {
-    BleManager.write(
-      idPeripheral, service, characteristic,data,50
-    )
-      .then(async () => {
-      })
-      .catch((error) => {
-        // Failure code
-        console.log(error);
-      });
+    const isConnected = await BleManager.isPeripheralConnected(idPeripheral, []);
+
+    if (!isConnected) {
+      Alert.alert('Chưa kết nối với thiết bị');
+      return; // hoặc tự reconnect rồi mới ghi
+    }
+
+    // 🟢 Nếu đã kết nối thì ghi
+    await BleManager.write(idPeripheral, service, characteristic, data);
+
+    console.log(TAG + "Data sent:", data);
   } catch (err: any) {
-    console.log(TAG + 'here:', err);
+    console.log(TAG + "Error sending:", err);
   }
 };
 function toHexString(byteArray: number[]) {

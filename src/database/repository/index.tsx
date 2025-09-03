@@ -1,8 +1,8 @@
-import SQLite from 'react-native-sqlite-storage';
+import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { TYPE_READ_RF } from '../../service/hhu/defineEM';
 import { NAME_CSDL, PATH_EXECUTE_CSDL, PATH_EXPORT_CSDL } from '../../shared/path';
 import { isNumeric, showAlert } from '../../util';
-import { dumyEntity, GetStringSelectEntity,PropsInfoMeterEntity, TABLE_NAME } from '../entity';
+import { dumyEntity, GetStringSelectEntity,PropsInfoMeterEntity, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from '../entity';
 import { dataDBTabel, getTypeOfColumn, PropsPercentRead } from '../model';
 import { PropsFilter, PropsPagination, PropsSorting } from '../service';
 import RNFS from 'react-native-fs';
@@ -18,32 +18,53 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export const checkTabelDBIfExist = async (): Promise<boolean> => {
   try {
-    if ((await getDBConnection()) === false) {
+    const db = await getDBConnection();
+    if (!db) {
       return false;
     }
-    //const query = `SELECT name FROM sqlite_master WHERE type='table' AND name=${TABLE_NAME}`;
-    let query = `create table if not exists ${TABLE_NAME} (`;
-    let first: boolean;
-    first = true;
-    for (let i in dumyEntity) {
-      if (first === true) {
-        first = false;
-      } else {
-        query += ',';
+
+    // Helper tạo bảng
+    const createTable = async (tableName: string, entity: Record<string, any>) => {
+      let query = `CREATE TABLE IF NOT EXISTS ${tableName} (`;
+      let first = true;
+      for (let key in entity) {
+        if (first) {
+          first = false;
+        } else {
+          query += ', ';
+        }
+        query += `${key} TEXT`; // mặc định TEXT, có thể tùy chỉnh kiểu
       }
+      query += ')';
+      await db.executeSql(query);
+      console.log(`✅ Table ${tableName} checked/created`);
+    };
 
-      query += i;
-    }
-    query += ')';
-    const results = await db?.executeSql(query);
+    // Tạo 3 bảng
+    await createTable(TABLE_NAME_INFO_METER, dumyEntity);
+    await createTable(TABLE_NAME_INFO_LINE, {
+      LINE_ID: '',
+      LINE_NAME: '',
+      ADDRESS: '',
+      CODE: '',
+    });
+    await createTable(TABLE_NAME_METER_DATA, {
+      TIMESTAMP: '',
+      IMPORT_DATA: '',
+      EXPORT_DATA: '',
+      EVENT: '',
+      BATTERY: '',
+      PERIOD: '',
+      DATA_RECORD: '',
+    });
 
-    //console.log('query: ', query);
-    console.log('create table if exist: ');
-  } catch (err :any) {
-    console.log(TAG, 'err tabel exist: ', err.message);
+    return true;
+  } catch (err: any) {
+    console.log('❌ err tabel exist: ', err.message);
+    return false;
   }
-  return false;
 };
+
 
 
 export async function BackupDb(){
@@ -84,15 +105,16 @@ export async function BackupDb(){
 
 export const deleteDataDB = async (): Promise<boolean> => {
   try {
-    if ((await getDBConnection()) === false) {
+    const db = await getDBConnection();
+    if (!db) {
       return false;
     }
 
     await BackupDb();
 
-    //const query = `SELECT name FROM sqlite_master WHERE type='table' AND name=${TABLE_NAME}`;
-    // let query = `DELETE FROM ${TABLE_NAME};`;
-    let query = `DROP TABLE IF EXISTS ${TABLE_NAME};`;
+    //const query = `SELECT name FROM sqlite_master WHERE type='table' AND name=${TABLE_NAME_INFO_METER}`;
+    // let query = `DELETE FROM ${TABLE_NAME_INFO_METER};`;
+    let query = `DROP TABLE IF EXISTS ${TABLE_NAME_INFO_METER};`;
     const results = await db?.executeSql(query);
     console.log('deletedb: ', results);
     await checkTabelDBIfExist();
@@ -102,36 +124,22 @@ export const deleteDataDB = async (): Promise<boolean> => {
   }
   return false;
 };
-
-export const getDBConnection = async (): Promise<boolean> => {
-  let succeed = false;
-  if (!db) {
-    console.log('get db');
-    // console.log(NAME_CSDL.split('.')[0]);
-    // console.log(PATH_EXECUTE_CSDL + '/' + NAME_CSDL);
-    succeed = await new Promise(async resolve => {
-      db = await SQLite.openDatabase(
-        {
-          name: NAME_CSDL,
-          location: 'default',
-        },
-        () => {
-          resolve(true);
-        },
-        err => {
-          console.log('open SQL error:' + err);
-          db = null;
-          resolve(false);
-        },
-      );
-    });
-    //await sleep(500);
-    //console.log(await db.executeSql('database tables'));
-  } else {
-    succeed = true;
+export const getDBConnection = async (): Promise<SQLiteDatabase | null> => {
+  try {
+    if (!db) {
+      console.log('📂 Opening database:', NAME_CSDL);
+      db = await SQLite.openDatabase({
+        name: NAME_CSDL,
+        location: 'default',
+      });
+      console.log('✅ Database opened successfully');
+    }
+    return db;
+  } catch (error) {
+    console.error('❌ Error opening database:', error);
+    db = null;
+    return null;
   }
-  //console.log('succeed:', succeed);
-  return succeed;
 };
 
 export type PropsCondition = {
@@ -140,7 +148,7 @@ export type PropsCondition = {
   operator: 'AND' | 'OR' | 'LIKE' | '';
 };
 
-export interface ICMISKHRepository {
+export interface MeterRepository {
   findAll: (
     pagination?: PropsPagination,
     condition?: PropsCondition,
@@ -173,7 +181,7 @@ export const closeConnection = async () => {
   }
 };
 
-export const InfoMeterRepository = {} as ICMISKHRepository;
+export const InfoMeterRepository = {} as MeterRepository;
 
 const filterArr = (items: any[], pagination: PropsPagination): any[] => {
   pagination.itemPerPage = pagination.itemPerPage ?? 1;
@@ -195,10 +203,10 @@ InfoMeterRepository.findAll = async (
 ) => {
   let items: PropsInfoMeterEntity[] = [];
   try {
-    if ((await getDBConnection()) === false) {
+    if ((await getDBConnection())) {
       return items;
     }
-    let query = `SELECT ${GetStringSelectEntity()} FROM ${TABLE_NAME}`;
+    let query = `SELECT ${GetStringSelectEntity()} FROM ${TABLE_NAME_INFO_METER}`;
     if (condition) {
       let first = true;
       query += `
@@ -287,7 +295,7 @@ InfoMeterRepository.findByColumn = async (
 ) => {
   let items: PropsInfoMeterEntity[] = [];
   try {
-    if ((await getDBConnection()) === false) {
+    if ((await getDBConnection())) {
       return items;
     }
 
@@ -320,7 +328,7 @@ InfoMeterRepository.findByColumn = async (
         clause += ` ORDER BY ${filter.idColumn} DESC`;
       }
     }
-    const query = `SELECT ${GetStringSelectEntity()} FROM ${TABLE_NAME} ` + clause;
+    const query = `SELECT ${GetStringSelectEntity()} FROM ${TABLE_NAME_INFO_METER} ` + clause;
     //console.log(TAG, query);
     const results = await db?.executeSql(query);
     results?.forEach(result => {
@@ -352,11 +360,11 @@ InfoMeterRepository.findUniqueValuesInColumn = async (
     }
   }
   try {
-    if ((await getDBConnection()) === false) {
+    if ((await getDBConnection())) {
       return items;
     }
     const query =
-      `SELECT DISTINCT ${filter.idColumn} FROM ${TABLE_NAME} ` + clause;
+      `SELECT DISTINCT ${filter.idColumn} FROM ${TABLE_NAME_INFO_METER} ` + clause;
     const results = await db?.executeSql(query);
     results?.forEach(result => {
       
@@ -387,10 +395,10 @@ InfoMeterRepository.update = async (
   condition: PropsCondition,
   valueSet: { [key: string]: any },
 ): Promise<boolean> => {
-  if ((await getDBConnection()) === false) {
+  if ((await getDBConnection())) {
     return false;
   }
-  let query: string = `UPDATE ${TABLE_NAME} 
+  let query: string = `UPDATE ${TABLE_NAME_INFO_METER} 
   SET `;
   let first: boolean;
   first = true;
@@ -464,7 +472,7 @@ InfoMeterRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
     haveNotRead: 0,
   };
   try {
-    if ((await getDBConnection()) === false) {
+    if ((await getDBConnection())) {
       return result;
     }
 
@@ -479,7 +487,7 @@ InfoMeterRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
           },
         ]
       | undefined;
-    query = `SELECT LoaiDoc FROM ${TABLE_NAME} `;
+    query = `SELECT LoaiDoc FROM ${TABLE_NAME_INFO_METER} `;
 
     clause = ` WHERE LoaiDoc = ${TYPE_READ_RF.HAVE_NOT_READ};`;
     results = await db?.executeSql(query + clause);
@@ -509,12 +517,12 @@ InfoMeterRepository.getPercentRead = async (): Promise<PropsPercentRead> => {
 };
 
 InfoMeterRepository.save = async (item: PropsInfoMeterEntity): Promise<boolean> => {
-  try {
-    if ((await getDBConnection()) === false) {
+  // try {
+    if ((await getDBConnection())) {
       return false;
     }
 
-    let queryCheckExist = `SELECT id FROM ${TABLE_NAME}  WHERE id = "${item.METER_NO}";`; //'id'
+    let queryCheckExist = `SELECT METER_NO FROM ${TABLE_NAME_INFO_METER}  WHERE METER_NO = "${item.METER_NO}";`; //'id'
 
     const res = await db?.executeSql(queryCheckExist);
     if (res) {
@@ -524,7 +532,7 @@ InfoMeterRepository.save = async (item: PropsInfoMeterEntity): Promise<boolean> 
       }
     }
 
-    let query = `INSERT INTO ${TABLE_NAME} (`;
+    let query = `INSERT INTO ${TABLE_NAME_INFO_METER} (`;
     let first: boolean;
     first = true;
     for (let i in item) {
@@ -553,36 +561,10 @@ InfoMeterRepository.save = async (item: PropsInfoMeterEntity): Promise<boolean> 
     //console.log('query:', query);
     
     await db?.executeSql(query);
+    console.log(query)
     return true;
-  } catch (error) {
-    console.log(TAG, error.message);
-  }
+  // } catch (error) {
+  //   console.log(TAG, error.message);
+  // }
   return false;
 };
-
-InfoMeterRepository.getImage = async (seri: string, loaiBCS: string) => {
-
-  let str : string | null = null;
- 
-  let query = `SELECT ${dataDBTabel.image.id} FROM ${TABLE_NAME} WHERE 
-  ${dataDBTabel.SERY_CTO.id} = "${seri}" AND ${dataDBTabel.LOAI_BCS.id} = "${loaiBCS}";`;
-
-  const results = await db?.executeSql(query);
-
-  if(results && results[0].rows.length)
-  {
-    //str = results[0].rows.item()
-    const items : any[] = [];
-    results?.forEach(result => {
-      for (let index = 0; index < result.rows.length; index++) {
-        items.push(result.rows.item(index));
-      }
-    });
-    const res = items as [{"image": string}];
-    str = res[0].image;
-    
-  }
-  //console.log('results here:', str);
-  return str;
-
-}

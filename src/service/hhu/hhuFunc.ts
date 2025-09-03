@@ -18,7 +18,7 @@ import { DeviceEventEmitter } from 'react-native';
 import { UPDATE_FW_HHU } from '../event/constant';
 import { navigation } from '../../component/header/controller';
 import { screenDatas } from '../../shared';
-import { HhuApsHHM_Init } from './otherNsx/huu_hong/hhuApsHHM';
+import { PropsResponse } from './aps/hhuAps';
 
 const TAG = 'hhuFunc: ';
 
@@ -70,20 +70,21 @@ export const ObjSend: {
 };
 
 export enum TYPE_HHU_CMD {
-  CONFIG_RF = 1,
-  VERSION = 2,
-  ACK = 3,
-  DATA = 4,
-  SHAKE_HAND = 5,
-  PROGRAMING = 6,
-  RESET_TO_PROGRAM = 7,
-  RESET = 8,
-  FAILED = 9,
-  CHANGE_NAME = 10,
-  RESET_TO_SET_NAME = 11,
-  BLE_DISCONNECT = 255,
+  CMD_APP_TRANSMIT_DEVICE_DATA_LORA = 0,
+  CMD_APP_TRANSMIT_DEVICE_DATA_OPTICAL = 1,
+  CMD_APP_CHANGE_NAME_BLE = 2,
+  CMD_RESET_HU = 3,
+  CMD_GET_VERSION_FIRMWARE = 4,
+  CMD_UPDATE_FIRMWARE = 5,
 }
 
+export enum TYPE_HHU_REPONE {
+  CMD_RECV_SUCCESS = 0,
+  CMD_CHECK_CRC_FAIL = 1,
+  CMD_INVAILD_COMMAND = 2,
+  CMD_DEVICE_TRANSMIT_APP_DATA_LORA = 3,
+  CMD_DEVICE_TRANSMIT_APP_DATA_OPTICAL = 4,
+}
 export const hhuFunc_HeaderType = struct(`
   uint8_t u8Cmd;
   uint16_t u16FSN;
@@ -95,7 +96,10 @@ export type hhuFunc_HeaderProps = {
   u16FSN: number;
   u16Length: number;
 };
-
+export type hhuFunc_PropsObjAnalysis = {
+  hhuHeader: hhuFunc_HeaderProps;
+  payload: Buffer;
+};
 export type ResponseRxProps = {
   hhuHeader: hhuFunc_HeaderProps;
 };
@@ -146,6 +150,8 @@ export async function hhuFunc_Send(
   HhuObj.buffTx.copy(buffSend, 0, 0, lengthSend);
   HhuObj.countRec = 0;
   HhuObj.flag_rec = false;
+  console.log('Send bytes: ', lengthSend);
+  console.log(BufferToString(buffSend, 0, lengthSend, 16, true));
   if (ObjSend.id) {
     if (header.u8Cmd === TYPE_HHU_CMD.DATA) {
       if (ObjSend.isNeedUpdate === true) {
@@ -183,7 +189,102 @@ export async function waitHHU(timeout: number): Promise<boolean> {
   }
   return false;
 }
+export async function waitAframeHHU(timeout: number): Promise<boolean> {
+  const oldTick = Date.now();
+  while (1) {
+    if (Date.now() - oldTick >= timeout) {
+      break;
+    }
+    if (HhuObj.flag_rec === true) {
+      HhuObj.flag_rec = false;
+      //console.log('Break by flag');
+      return true;
+    }
+    await sleep(50);
+  }
+  return false;
+}
+export async function hhuFunc_wait(timeout: number): Promise<PropsResponse> {
+  let hhuHeader = {} as hhuFunc_HeaderProps;
+  let response = {} as PropsResponse;
+  response.bSucceed = false;
 
+  response.obj = {} as hhuFunc_PropsObjAnalysis;
+  HhuObj.identityFrame.bActive = false;
+  //console.log('1');
+  const bTimeout = await waitAframeHHU(timeout + 1200);
+  //console.log('2');
+
+  if (bTimeout === false) {
+    console.log('timeout');
+    response.strMessage = 'Quá thời gian';
+    response.bSucceed = false;
+    return response;
+  }
+
+  if (HhuObj.countRec < sizeIdentityHeader) {
+    console.log('count rec so small');
+    response.strMessage = 'count rec so small';
+    response.bSucceed = false;
+    return response;
+  }
+
+  const crc16FrameUart = crc16_offset(
+    HhuObj.buffRx,
+    0,
+    HhuObj.countRec - 2 /*crc */,
+  );
+  const crc16Buff = HhuObj.buffRx.readUIntLE(HhuObj.countRec - 2 /*crc */, 2);
+
+  // console.log('crc caculate:', crc16Caculate);
+  // console.log('crc buff:', crc16Buff);
+
+  if (crc16FrameUart !== crc16Buff) {
+    console.log(TAG, 'CRC error');
+    console.log(
+      'BuffRx:',
+      BufferToString(HhuObj.buffRx, 0, HhuObj.countRec, 16, true),
+    );
+    console.log('countRec:', HhuObj.countRec);
+    console.log('crc16FrameUart:', crc16FrameUart.toString(16));
+    console.log('crc16Buff:', crc16Buff.toString(16));
+
+    response.strMessage = 'crc uart error';
+    response.bSucceed = false;
+    return response;
+  }
+  let index = 0;
+  hhuHeader = Array2Struct(HhuObj.buffRx, index, hhuFunc_HeaderType);
+  index += sizeof(hhuFunc_HeaderType);
+
+  HhuObj.buffRx.copyWithin(0, index);
+  HhuObj.countRec -= index;
+
+  response.obj.hhuHeader = hhuHeader;
+  response.obj.payload = HhuObj.buffRx.slice(0, hhuHeader.u16Length); //Buffer.from(HhuObj.buffRx, 0, hhuHeader.u16Length);
+
+  console.log('hhuHeader:', hhuHeader);
+
+  console.log('Rec func:', HhuObj.countRec - 2 /* crc */ + ' bytes');
+  console.log(
+    BufferToString(response.obj.payload, 0, hhuHeader.u16Length, 16, true),
+  );
+
+  // switch (hhuHeader.u8Cmd) {
+  //   case TYPE_HHU_CMD.DATA:
+  //     //
+  //     break;
+  //   case TYPE_HHU_CMD.DATA:
+  //     //
+  //     break;
+  //   default:
+  //     console.error('No type cmd in header hhu receive');
+  //     return false;
+  // }
+
+  response.bSucceed = true;
+  return response;
+}
 export async function analysisRx(
   respond: ResponseRxProps,
   timeout: number,
@@ -251,57 +352,6 @@ export async function analysisRx(
 
   return true;
 }
-
-// /////////////
-
-export const ShakeHand = async (): Promise<boolean | 1> => {
-  const pass: Buffer = Buffer.from([
-    0xdd, 0x4f, 0x8b, 0xbd, 0xfa, 0x12, 0x52, 0x43,
-  ]);
-
-  const header: hhuFunc_HeaderProps = {
-    u8Cmd: TYPE_HHU_CMD.SHAKE_HAND,
-    u16FSN: 0xffff,
-    u16Length: pass.length,
-  };
-  console.log ("ObjSend.id" + ObjSend.id)
-  await BleFunc_StartNotification(ObjSend.id as string);
-  let bResult: boolean = await hhuFunc_Send(header, pass);
-
-  //console.log('bResult:', bResult);
-
-  const respond = {} as ResponseRxProps;
-
-  if (bResult) {
-    bResult = await analysisRx(respond, 1200);
-
-    if (bResult) {
-      if (respond.hhuHeader.u8Cmd === TYPE_HHU_CMD.ACK) {
-        bResult = true;
-      } else if (respond.hhuHeader.u8Cmd === TYPE_HHU_CMD.PROGRAMING) {
-        DeviceEventEmitter.emit(UPDATE_FW_HHU);
-        bResult = true;
-        console.log('hhu send request update fw');
-        return 1;
-      } else {
-        console.log(TAG, 'No match command in shake hand');
-        bResult = false;
-      }
-    } else {
-      bResult = false;
-    }
-  } else {
-    bResult = false;
-  }
-
-  //await BleFunc_StopNotification(ObjSend.id);
-  if (bResult) {
-    console.log('ShakeHand succeed');
-  } else {
-    console.log('ShakeHand failed');
-  }
-  return bResult;
-};
 
 export async function readVersion(): Promise<string | null> {
   const header: hhuFunc_HeaderProps = {

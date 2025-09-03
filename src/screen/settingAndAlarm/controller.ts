@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PropsStore, storeContext } from '../../store';
+import { updateValueAppSettingFromNvm } from '../../service/storage';
 
 type PropsHookState = {
   typeAlarm: PropsTypeAlarmRegister;
@@ -47,4 +48,14 @@ export const GetHookProps = (): PropsHook => {
   store = React.useContext(storeContext);
 
   return hookProps;
+};
+export const onInit = async () => {
+      const appSetting = await updateValueAppSettingFromNvm();
+      // console.log('appSetting', appSetting);
+
+      store.setState(state => {
+        state.appSetting = appSetting;
+        return { ...state };
+      });
+      store = React.useContext(storeContext);
 };

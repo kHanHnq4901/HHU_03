@@ -9,7 +9,6 @@ export async function onSavePress() {
   console.log('save');
 
   console.log('abc:', hook.state.appSetting.server);
-  console.log('loginMode:', hook.state.appSetting.loginMode);
 
   await saveStorage(hook.state.appSetting as PropsAppSetting);
 
@@ -32,12 +31,8 @@ export function getDefaultIPPort(): {
   host: string;
   port: string;
 } {
-  
-
   const ret = {} as { host: string; port: string };
-
-   
-    ret.host = 'http://14.225.244.63'; // https://apigcsncc.npc.com.vn // https://apigcsinternet.npc.com.vn
+    ret.host = 'http://14.225.244.63';
     ret.port = '8088';
 
   return ret;

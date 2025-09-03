@@ -100,8 +100,8 @@ export const ManualReadScreen = () => {
     try {
       const res = await axios.get('http://14.225.244.63:8088/api/GetMeterAccount', {
         params: {
-          userID: store.state.DLHNUser.moreInfoUser.userId,
-          token: store.state.DLHNUser.moreInfoUser.token,
+          userID: store.state.infoUser.moreInfoUser.userId,
+          token: store.state.infoUser.moreInfoUser.token,
         },
       });
         
@@ -122,11 +122,13 @@ export const ManualReadScreen = () => {
   const mapElement = React.useMemo(() => (
     <MapView
       style={styles.map}
-      mapStyle="https://maps.track-asia.com/styles/v2/streets.json?key=public_key"
+      mapStyle="https://maps.track-asia.com/styles/v2/streets.json?key=f4a6c08959b47211756357354b1b73ac74"
       compassEnabled
       zoomEnabled
       scrollEnabled
       rotateEnabled
+      pitchEnabled
+      attributionEnabled
     >
       <Camera
         zoomLevel={15}

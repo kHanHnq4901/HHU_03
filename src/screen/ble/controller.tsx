@@ -1,6 +1,6 @@
 import Geolocation from '@react-native-community/geolocation';
 import React, { useContext, useEffect, useState } from 'react';
-import { EmitterSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { EmitterSubscription, EventSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import * as permission from 'react-native-permissions';
 import {
   requestBluetoothPermissions,
@@ -12,18 +12,19 @@ import {
 import { PropsStore, storeContext } from '../../store';
 import BleManager from 'react-native-ble-manager';
 import { onScanPress } from './handleButton';
-import { showAlert } from '../../util';
+import { showAlert, showToast } from '../../util';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StackRootParamsList } from '../../navigation/model/model';
 import RNAndroidLocationEnabler from 'react-native-android-location-enabler';
 import {
   connectLatestBLE,
-  handleUpdateValueForCharacteristic,
+  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
   initModuleBle,
 } from '../../service/hhu/bleHhuFunc';
-var LocationEnabler =
-  Platform.OS === 'android' ? require('react-native-location-enabler') : null;
-
+import { ObjSend } from '../../service/hhu/hhuFunc';
+  let hhuDiscoverPeripheral: EventSubscription | null= null;
+  let hhuDisconnectListener: EventSubscription | null = null;
+  let hhuReceiveDataListener: EventSubscription | null = null;
 export type PropsItemBle = {
   isConnectable?: boolean;
   name: string;
@@ -57,7 +58,6 @@ export let store = {} as PropsStore;
 
 
 const BleManagerModule = NativeModules.BleManager;
-export const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 
 let enableLocationHook = {} as {
   enabled: any;
@@ -144,8 +144,21 @@ const handleDidUpdateState = (obj: { state: any; }) => {
   //     });
   // }
 };
-
+export const hhuHandleDisconnectedPeripheral = async (data: any) => {
+  console.log ('Đã tạo sự kiện mất kết nối')
+  store.setState(state => {
+    state.hhu.name = '';
+    state.hhu.idConnected = '';
+    state.hhu.connect = 'DISCONNECTED';
+    return { ...state };
+  });
+  console.log (store.state.hhu.connect)
+  ObjSend.id = null;
+  showToast('Thiết bị đã ngắt kết nối')
+};
 const handleDiscoverPeripheral = (peripheral: any) => {
+  const connectedId = store?.state.hhu.idConnected;
+
   // Tạo Map từ list hiện tại
   const peripherals = new Map(
     hookProps.state.ble.listNewDevice.map(itm => [itm.id, itm])
@@ -164,12 +177,17 @@ const handleDiscoverPeripheral = (peripheral: any) => {
     rssi: number;
   };
 
+  // Bỏ qua nếu là thiết bị đang connect
+  if (res.id === connectedId) {
+    return;
+  }
+
   // Chỉ lưu thiết bị có tên & có thể kết nối
   if (res.name && res.advertising?.isConnectable) {
-    peripherals.set(res.id, { 
-      name: res.name, 
-      id: res.id, 
-      rssi: res.rssi 
+    peripherals.set(res.id, {
+      name: res.name,
+      id: res.id,
+      rssi: res.rssi
     });
 
     hookProps.setState(state => {
@@ -180,6 +198,7 @@ const handleDiscoverPeripheral = (peripheral: any) => {
     console.log("Thiết bị mới:", res.name, res.id, res.rssi);
   }
 };
+
 
 export const onInit = async (navigation: StackNavigationProp<StackRootParamsList>) => {
   try {
@@ -217,12 +236,25 @@ export const onInit = async (navigation: StackNavigationProp<StackRootParamsList
       }
     }
 
-    BleManager.onDiscoverPeripheral(handleDiscoverPeripheral);
-    BleManager.onStopScan(handleStopScan);
+     // 🔌 Setup BLE event listeners — đảm bảo chỉ 1 lần
+      if (!hhuDiscoverPeripheral) {
+        hhuDiscoverPeripheral = BleManager.onDiscoverPeripheral(
+          handleDiscoverPeripheral
+        );
+      }
 
-    BleManager.onDidUpdateValueForCharacteristic(
-      handleUpdateValueForCharacteristic
-    );
+      if (!hhuReceiveDataListener) {
+        hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
+          hhuHandleReceiveData
+        );
+      }
+
+      if (!hhuDisconnectListener) {
+        hhuDisconnectListener = BleManager.onDisconnectPeripheral(
+          hhuHandleDisconnectedPeripheral
+        );
+      }
+    BleManager.onStopScan(handleStopScan);
 
     // BleManager.onDisconnectPeripheral((data: { peripheral: any; }) => {
     //   console.log('Peripheral disconnected:', data.peripheral);

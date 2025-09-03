@@ -3,17 +3,16 @@ import {
   Alert,
   DeviceEventEmitter,
   EmitterSubscription,
+  EventSubscription,
   Platform,
 } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import RNFS from 'react-native-fs';
 import { checkTabelDBIfExist } from '../../../database/repository';
-import * as MatchSeriVersionRepository from '../../../database/repository/matchSeriVersionRepository';
 import {
   UpdateDataSeriVersionToLocaleVariable,
   UpdateFirstTimeSeriVersion,
 } from '../../../database/service/matchSeriVersionService';
-import { bleManagerEmitter } from '../../../screen/ble/controller';
 import { onReceiveSharingIntent } from '../../../service/event';
 import { UPDATE_FW_HHU } from '../../../service/event/constant';
 import {
@@ -37,13 +36,17 @@ import {
   PATH_IMPORT_XML,
 } from '../../../shared/path';
 import { PropsStore, storeContext } from '../../../store';
+import { handleDiscoverPeripheral, hhuHandleDisconnectedPeripheral } from '../../../screen/overview/controller';
 
 const TAG = 'controllerDrawerContent:';
 
 export let store = {} as PropsStore;
 
-let hhuDisconnectListener: any = null;
-let hhuReceiveDataListener: any = null;
+
+
+let hhuDiscoverPeripheral: EventSubscription | null ;
+let hhuDisconnectListener: EventSubscription | null = null;
+let hhuReceiveDataListener: EventSubscription | null = null;
 
 let updateFWListener: EmitterSubscription | undefined;
 
@@ -63,19 +66,8 @@ function checkUpdateAppMobileInterval() {
   // }
 }
 
-export const hhuHandleDisconnectedPeripheral = async (data: any) => {
-  console.log('data disconnect peripheral:', data);
-  store?.setState(state => {
-    state.hhu.idConnected = '';
-    state.hhu.connect = 'DISCONNECTED';
-    return { ...state };
-  });
-  ObjSend.id = null;
-  if (Platform.OS === 'ios') {
-    console.log(TAG, 'ios scan...');
-    await BleManager.scan([], 0, false);
-  }
-};
+
+
 
 export const onInit = async (navigation: any) => {
   let appSetting = await updateValueAppSettingFromNvm();
@@ -84,23 +76,24 @@ export const onInit = async (navigation: any) => {
     return { ...state };
   });
 
-  // console.log('add listener ble at drawer');
-  if (!hhuDisconnectListener) {
-    bleManagerEmitter.removeAllListeners('onDiscoverPeripheral');
-    hhuDisconnectListener = BleManager.onDiscoverPeripheral(
-      hhuHandleDisconnectedPeripheral
+  // 🔌 Setup BLE event listeners — đảm bảo chỉ 1 lần
+  if (!hhuDiscoverPeripheral) {
+    hhuDiscoverPeripheral = BleManager.onDiscoverPeripheral(
+      handleDiscoverPeripheral
     );
   }
 
   if (!hhuReceiveDataListener) {
-    bleManagerEmitter.removeAllListeners(
-      'onDidUpdateValueForCharacteristic'
-    );
     hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
       hhuHandleReceiveData
     );
   }
 
+  if (!hhuDisconnectListener) {
+    hhuDisconnectListener = BleManager.onDisconnectPeripheral(
+      hhuHandleDisconnectedPeripheral
+    );
+  }
   try {
     await initModuleBle();
 
@@ -118,6 +111,7 @@ export const onInit = async (navigation: any) => {
     }
   } catch (err: any) {
     store?.setState(state => {
+      state.hhu.idConnected = '';
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
@@ -144,8 +138,6 @@ export const onInit = async (navigation: any) => {
         folderExist = await RNFS.exists(PATH_IMPORT_XML);
         if (!folderExist) {
           await RNFS.mkdir(PATH_IMPORT_XML);
-        } else {
-          console.log('PATH_IMPORT_XML is exist');
         }
 
         folderExist = await RNFS.exists(PATH_EXPORT_XML);
@@ -170,7 +162,6 @@ export const onInit = async (navigation: any) => {
       onReceiveSharingIntent();
 
       await checkTabelDBIfExist();
-      await MatchSeriVersionRepository.checkTableDBIfExist();
       const rest = await UpdateDataSeriVersionToLocaleVariable();
       if (rest !== true) {
         console.log(TAG, 'update first time version');
@@ -184,22 +175,27 @@ export const onInit = async (navigation: any) => {
     console.log(TAG, err);
   }
 
-  updateFWListener = DeviceEventEmitter.addListener(UPDATE_FW_HHU, () => {
-    Alert.alert('Cập nhật HHU', 'Cập nhật phần mềm cho thiết bị cầm tay', [
-      {
-        text: 'OK',
-        onPress: () => {
-          navigation.navigate('BoardBLE', {
-            title: 'Thiết bị cầm tay',
-            info: 'Cập nhật phần mềm cho thiết bị cầm tay',
-            isUpdate: true,
-          });
+  // 🔄 Update FW listener — chỉ 1 lần
+  if (!updateFWListener) {
+    updateFWListener = DeviceEventEmitter.addListener(UPDATE_FW_HHU, () => {
+      Alert.alert('Cập nhật HHU', 'Cập nhật phần mềm cho thiết bị cầm tay', [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.navigate('BoardBLE', {
+              title: 'Thiết bị cầm tay',
+              info: 'Cập nhật phần mềm cho thiết bị cầm tay',
+              isUpdate: true,
+            });
+          },
+          style: 'default',
         },
-        style: 'default',
-      },
-    ]);
-  });
+      ]);
+    });
+  }
 };
+
+
 
 
 export const onDeInit = async () => {

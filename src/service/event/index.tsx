@@ -3,7 +3,7 @@ import RNFS from 'react-native-fs';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 import { PATH_IMPORT_CSDL, PATH_IMPORT_XML } from '../../shared/path';
 import { getFilExtension, showAlert } from '../../util';
-import { importXmlFromPath } from '../../xml/xmlUtil';
+
 import { PACKAGE_NAME, RECEIVE_FILE_CSDL, RECEIVE_FILE_XML } from './constant';
 import { deleteFile } from '../../shared/file';
 

@@ -1,478 +1,243 @@
-import React from 'react';
-import {
-  PropsItemBook,
-  PropsItemColumn,
-  PropsItemStation,
-} from '../../component/detailDB';
-import { infoHeader } from '../../component/header';
-import { PropsKHCMISModel, PropsPercentRead } from '../../database/model';
-import { CMISKHServices } from '../../database/service';
-import {
-  IsReadRFSucceed,
-  IsWriteByHand,
-  TYPE_READ_RF,
-} from '../../service/hhu/defineEM';
-import { Colors } from '../../theme';
-import { NavigationProp, NavigationRoute, ParamListBase } from '@react-navigation/native';
-
-const labels = [
-  'Lỗi',
-  'Ghi \ntay ',
-  //'Bất thường',
-  'Chưa \nđọc',
-  'Thành \ncông',
-];
-
-type PropsSubQuantity = {
-  label: string;
-  quantity: number;
-  color: string;
-};
-type PropsInfoQuantity = {
-  readError: PropsSubQuantity;
-  writeByHand: PropsSubQuantity;
-  upperThreshold: PropsSubQuantity;
-  lowerThreshold: PropsSubQuantity;
-  negative: PropsSubQuantity;
-  succeed: PropsSubQuantity;
-  noRead: PropsSubQuantity;
-  total: PropsSubQuantity;
-};
-
-export const labelsStock = [
-  'Lỗi',
-  'Ghi tay',
-
-  'Thành công',
-  'Chưa đọc',
-  'Vượt ngưỡng trên',
-  'Vật ngưỡng dưới',
-  'Sản lượng âm',
-  'Tổng BCS',
-
-  // 'Lỗi ',
-  // 'Ghi tay ',
-  // 'Bất thường',
-  // 'Thành công',
-  // 'Chưa đọc',
-  // 'Tổng BCS',
-];
-
-// error: number;
-// writeByHand: number;
-// noRead: number;
-// succeed: number;
-
-export const colorsChart = [
-  Colors.primary,
-  Colors.register.byHand,
-  Colors.backgroundIcon,
-  Colors.register.normal,
-  //Colors.purple,
-  // '#c2fcc1', //'#FF9800',
-  // '#FFEB3B',
-  // '#67f3bb', //'#4CAF50',
-  // Colors.backgroundIcon, //'#2196F3',
-  //'#0b3af9',
-];
-
-export const dummyDataTable = [
-  {
-    x: labels[0],
-    y: 10,
-  },
-  {
-    x: labels[1],
-    y: 10,
-  },
-  {
-    x: labels[2],
-    y: 10,
-  },
-  {
-    x: labels[3],
-    y: 10,
-  },
-];
-
+import React, { useState } from "react";
+import { Alert } from "react-native";
+import { ERROR_MESSAGES, ERROR_TABLE } from "../../service/hhu/defineEM";
+export const hookProps = {} as PropsHook;
 type PropsState = {
-  graphicData: {
-    x: string;
-    y: number;
-  }[];
-  percent: number[];
-  dataDB: PropsKHCMISModel[];
-  detailDB: PropsItemStation[];
-  infoQuantity: PropsInfoQuantity;
-  infoQuantityArr: PropsSubQuantity[];
+  serial: string;
+  cycle: string;
+  timeRange1Start: Date;
+  timeRange1End: Date;
+  timeRange2Start: Date;
+  timeRange2End: Date;
+  pickerMode: null | string;
+  daysPerMonth: number[];
+  openDays: boolean;
+  dayItems: { label: string; value: number }[];
+  readCycle: boolean;
+  readTimeRange : boolean
+  readDaysPerMonth: boolean;
 };
 
 type PropsHook = {
   state: PropsState;
   setState: React.Dispatch<React.SetStateAction<PropsState>>;
+  formatHour: (date: Date) => string;
+  onChangeTime: (mode: string, selectedDate?: Date) => void;
 };
 
-export const hookProps = {} as PropsHook;
+// ---- Custom hook ----
+  export const useHookProps = (): PropsHook => {
+    const [state, setState] = useState<PropsState>({
+      serial: "",
+      cycle: "2",
+      
+      timeRange1Start: new Date(),
+      timeRange1End: new Date(),
+      timeRange2Start: new Date(),
+      timeRange2End: new Date(),
 
-function GetDefaultInfoQuantity(): PropsInfoQuantity {
-  const infoQuantity: PropsInfoQuantity = {
-    readError: {
-      label: 'Lỗi',
-      quantity: 0,
-      color: Colors.primary,
-    },
-    writeByHand: {
-      label: 'Ghi tay',
-      quantity: 0,
-      color: Colors.register.byHand,
-    },
+      pickerMode: null,
 
-    succeed: {
-      label: 'Thành công',
-      quantity: 0,
-      color: Colors.register.normal,
-    },
-    noRead: {
-      label: 'Chưa đọc',
-      quantity: 0,
-      color: Colors.backgroundIcon,
-    },
-    upperThreshold: {
-      label: 'Vượt ngưỡng trên',
-      quantity: 0,
-      color: Colors.register.upper,
-    },
-    lowerThreshold: {
-      label: 'Vượt ngưỡng dưới',
-      quantity: 0,
-      color: Colors.register.lower,
-    },
-    negative: {
-      label: 'Sản lượng âm',
-      quantity: 0,
-      color: Colors.register.negative,
-    },
-    total: {
-      label: 'Tổng BCS',
-      quantity: 0,
-      color: Colors.purple,
-    },
+      daysPerMonth: [],
+      openDays: false,
+      dayItems: Array.from({ length: 28 }, (_, i) => ({
+        label: `${i + 1}`,
+        value: i + 1,
+      })),
+
+      readCycle: true,
+      readTimeRange: true,
+      readDaysPerMonth: true,
+    });
+
+    const formatHour = (date: Date) =>
+      date.getHours().toString().padStart(2, "0") + " h";
+
+    const onChangeTime = (mode: string, selectedDate?: Date) => {
+      if (!selectedDate) {
+        setState(prev => ({ ...prev, pickerMode: null }));
+        return;
+      }
+
+      const date = new Date(selectedDate);
+      date.setMinutes(0);
+      date.setSeconds(0);
+
+      // Kiểm tra phạm vi sáng
+      if (mode === "t1start" || mode === "t1end") {
+        if (date.getHours() < 0 || date.getHours() > 12) {
+          Alert.alert("Lỗi", "Khoảng giờ sáng chỉ được từ 0h đến 12h");
+          setState(prev => ({ ...prev, pickerMode: null }));
+          return;
+        }
+      }
+
+      // Kiểm tra phạm vi chiều
+      if (mode === "t2start" || mode === "t2end") {
+        if (date.getHours() < 12 || date.getHours() > 23) {
+          Alert.alert("Lỗi", "Khoảng giờ chiều chỉ được từ 12h đến 24h");
+          setState(prev => ({ ...prev, pickerMode: null }));
+          return;
+        }
+      }
+
+      // Kiểm tra giờ bắt đầu < giờ kết thúc
+      if (mode === "t1start" && date >= state.timeRange1End) {
+        Alert.alert("Lỗi", "Giờ bắt đầu phải nhỏ hơn giờ kết thúc (sáng)");
+        setState(prev => ({ ...prev, pickerMode: null }));
+        return;
+      }
+      if (mode === "t1end" && date <= state.timeRange1Start) {
+        Alert.alert("Lỗi", "Giờ kết thúc phải lớn hơn giờ bắt đầu (sáng)");
+        setState(prev => ({ ...prev, pickerMode: null }));
+        return;
+      }
+      if (mode === "t2start" && date >= state.timeRange2End) {
+        Alert.alert("Lỗi", "Giờ bắt đầu phải nhỏ hơn giờ kết thúc (chiều)");
+        setState(prev => ({ ...prev, pickerMode: null }));
+        return;
+      }
+      if (mode === "t2end" && date <= state.timeRange2Start) {
+        Alert.alert("Lỗi", "Giờ kết thúc phải lớn hơn giờ bắt đầu (chiều)");
+        setState(prev => ({ ...prev, pickerMode: null }));
+        return;
+      }
+
+      // Nếu hợp lệ thì update state
+      setState(prev => {
+        const newState = { ...prev };
+        if (mode === "t1start") newState.timeRange1Start = date;
+        if (mode === "t1end") newState.timeRange1End = date;
+        if (mode === "t2start") newState.timeRange2Start = date;
+        if (mode === "t2end") newState.timeRange2End = date;
+        newState.pickerMode = null;
+        return newState;
+      });
+    };
+    hookProps.state = state;
+    hookProps.setState = setState;
+    hookProps.formatHour = formatHour
+    hookProps.onChangeTime = onChangeTime
+    return hookProps ;
   };
 
-  return infoQuantity;
+  export function responeSetting(payload: number[]) {
+    console.log("🔹 Xử lý Setting:", payload);
+  
+    if (!payload || payload.length < 2) {
+      Alert.alert("Lỗi", "Payload không hợp lệ!");
+      return;
+    }
+  
+    const errorCode = payload[0] as ERROR_TABLE;
+    const command = payload[1];
+  
+    if (errorCode !== ERROR_TABLE.E_SUCCESS) {
+      const message = ERROR_MESSAGES[errorCode] || "Lỗi không xác định";
+      Alert.alert("❌ Lỗi", message);
+      return;
+    }
+  
+    switch (command) {
+      case 2: {
+        // ✅ Get toàn bộ settings
+        const settingCount = payload[2];
+        console.log(`✅ Thành công - có ${settingCount} settings`);
+  
+        let offset = 3;
+        for (let i = 0; i < settingCount; i++) {
+          const paramId = payload[offset];
+          const lenParam = payload[offset + 1];
+          const paramData = payload.slice(offset + 2, offset + 2 + lenParam);
+  
+          console.log(
+            `📌 Setting ${i + 1}: paramId=${paramId}, len=${lenParam}, data=`,
+            paramData
+          );
+  
+          applySetting(paramId, paramData);
+          offset += 2 + lenParam;
+        }
+        break;
+      }
+  
+      case 3: {
+        // ✅ Get LORA_CMD_TIME_WAKEUP
+        const count = payload[2]; // byte đếm số config
+        const data = payload.slice(3, 3 + count); // lấy đúng count byte data
+        console.log("⏰ LORA_CMD_TIME_WAKEUP:", data);
+        applySetting(0x00, data);
+        break;
+      }
+  
+      case 4: {
+        // ✅ Get LORA_CMD_WAKEUP_SPECIFIC_DAYS
+        const count = payload[2];
+        const data = payload.slice(3, 3 + count);
+        console.log("📅 LORA_CMD_WAKEUP_SPECIFIC_DAYS:", data);
+        applySetting(0x01, data);
+        break;
+      }
+  
+      case 5: {
+        // ✅ Get LORA_CMD_PERIOD_LATCH
+        const count = payload[2];
+        const data = payload.slice(3, 3 + count);
+        console.log("🔄 LORA_CMD_PERIOD_LATCH:", data);
+        applySetting(0x02, data);
+        break;
+      }
+  
+      default:
+        console.log(`⚠️ Command ${command} chưa được hỗ trợ`);
+    }
+  }
+  
+  
+
+function applySetting(paramId: number, paramData: number[]) {
+  switch (paramId) {
+    case 0x00: // LORA_WAKEUP_TIME (4 byte: [cycle, h1, h2, h3] tuỳ định nghĩa)
+      if (paramData.length === 4) {
+        const cycle = paramData[0];
+        const hour1 = paramData[1];
+        const hour2 = paramData[2];
+        const hour3 = paramData[3];
+
+        hookProps.setState(prev => ({
+          ...prev,
+          cycle: String(cycle),
+          timeRange1Start: new Date(2025, 0, 1, hour1, 0),
+          timeRange1End: new Date(2025, 0, 1, hour2, 0),
+          timeRange2Start: new Date(2025, 0, 1, hour3, 0),
+        }));
+      }
+      break;
+
+    case 0x01: // LORA_WAKEUP_SPECIFIC_DAYS_ID (7 byte: danh sách ngày trong tháng)
+      if (paramData.length === 7) {
+        hookProps.setState(prev => ({
+          ...prev,
+          daysPerMonth: paramData, // array [d1, d2, ... d7]
+        }));
+      }
+      break;
+
+    case 0x02: // LORA_PERIOD_LATCH_ID (2 byte uint16_t)
+      if (paramData.length === 2) {
+        // Giả sử theo little-endian
+        const value = (paramData[0] & 0xff) | ((paramData[1] & 0xff) << 8);
+    
+        hookProps.setState(prev => ({
+          ...prev,
+          periodLatch: value, // ✅ lưu thẳng số 16-bit vào state
+        }));
+    
+        console.log("🔄 LORA_PERIOD_LATCH_ID:", value);
+      }
+      break;
+      console.log(`⚠️ Chưa xử lý paramId=${paramId}, data=`, paramData);
+  }
 }
 
-function convertInfoQuantity2List(info: PropsInfoQuantity): PropsSubQuantity[] {
-  const rest: PropsSubQuantity[] = [];
-
-  for (let key in info) {
-    rest.push(info[key]);
-  }
-
-  return rest;
-}
-
-export const GetHook = () => {
-  const graphData: {
-    x: string;
-    y: number;
-  }[] = [];
-
-  const percent: number[] = [];
-
-  for (let item of labels) {
-    graphData.push({
-      x: item,
-      y: 1,
-    });
-    percent.push(0);
-  }
-  //console.log(graphData);
-  const infoQuantity = GetDefaultInfoQuantity();
-  const [state, setState] = React.useState<PropsState>({
-    graphicData: graphData,
-    percent: percent,
-    dataDB: [],
-    detailDB: [],
-    infoQuantity: infoQuantity,
-    infoQuantityArr: convertInfoQuantity2List(infoQuantity),
-  });
-
-  hookProps.state = state;
-  hookProps.setState = setState;
-};
-
-export const onInit = async (navigation: Omit<NavigationProp<ReactNavigation.RootParamList>, "getState"> & { getState(): Readonly<{ key: string; index: number; routeNames: string[]; history?: unknown[] | undefined; routes: NavigationRoute<ParamListBase, string>[]; type: string; stale: false; }> | undefined; }) => {
-  navigation.addListener('beforeRemove', e => {
-    e.preventDefault();
-  });
-
-  navigation.addListener('focus', async () => {
-    console.log('Get Percentage Read');
-
-    const dataDB = await CMISKHServices.findAll();
-    //const result = await CMISKHServices.getPercentRead();
-    //console.log('resultcc:', result);
-
-    const infoQuantity = GetDefaultInfoQuantity();
-
-    dataDB.forEach(item => {
-      if (IsReadRFSucceed(item.LoaiDoc as TYPE_READ_RF)) {
-        infoQuantity.succeed.quantity++;
-        if (
-          item.LoaiDoc === TYPE_READ_RF.ABNORMAL_CAPACITY ||
-          item.LoaiDoc === TYPE_READ_RF.ABNORMAL_UPPER
-          //item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_UPPER
-        ) {
-          infoQuantity.upperThreshold.quantity++;
-          //console.log('RF:', infoQuantity.upperThreshold.quantity);
-        } else if (
-          item.LoaiDoc === TYPE_READ_RF.ABNORMAL_LOWER //||
-          //item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_LOWER
-        ) {
-          infoQuantity.lowerThreshold.quantity++;
-        } else if (
-          item.LoaiDoc === TYPE_READ_RF.ABNORMAL_NEGATIVE //||
-          //item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_NEGATIVE
-        ) {
-          infoQuantity.negative.quantity++;
-        }
-      } else if (item.LoaiDoc === TYPE_READ_RF.READ_FAILED) {
-        infoQuantity.readError.quantity++;
-        // } else if (item.LoaiDoc === TYPE_READ_RF.ABNORMAL_CAPACITY) {
-        //   result.abnormalRead++;
-      } else if (IsWriteByHand(item.LoaiDoc as TYPE_READ_RF)) {
-        infoQuantity.writeByHand.quantity++;
-        if (item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_UPPER) {
-          infoQuantity.upperThreshold.quantity++;
-          //console.log('hand:', infoQuantity.upperThreshold.quantity);
-        } else if (item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_LOWER) {
-          infoQuantity.lowerThreshold.quantity++;
-        } else if (
-          item.LoaiDoc === TYPE_READ_RF.WRITE_BY_HAND_ABNORMAL_NEGATIVE
-        ) {
-          infoQuantity.negative.quantity++;
-        }
-      } else {
-        infoQuantity.noRead.quantity++;
-      }
-    });
-
-    infoQuantity.total.quantity = dataDB.length;
-
-    //   Colors.register.notRead,
-    // Colors.register.byHand,
-    // Colors.register.upper,
-    // Colors.register.lower,
-    // Colors.register.negative,
-    // Colors.register.normal,
-
-    type NoChartProps = {
-      error: number;
-      writeByHand: number;
-      noRead: number;
-      succeed: number;
-    };
-
-    const resultChart: NoChartProps = {
-      error: infoQuantity.readError.quantity,
-      writeByHand: infoQuantity.writeByHand.quantity,
-      noRead: infoQuantity.noRead.quantity,
-      succeed: infoQuantity.succeed.quantity,
-    };
-
-    const detailDB = getDbDetail(dataDB);
-
-    hookProps.setState(state => {
-      state.infoQuantity = infoQuantity;
-      state.infoQuantityArr = convertInfoQuantity2List(infoQuantity);
-
-      let total = 0;
-      let percent: string[] = [];
-
-      state.percent = [];
-      for (let item in resultChart) {
-        total += resultChart[item];
-      }
-
-      for (let item in resultChart) {
-        if (total === 0) {
-          percent.push(' %');
-          state.percent.push(0);
-        } else {
-          const per = (resultChart[item] / total) * 100;
-          state.percent.push(per);
-          percent.push(' ' + per.toFixed(0) + ' %');
-        }
-      }
-
-      const minimumPercent = 8;
-      // error: number;
-      // writeByHand: number;
-      // noRead: number;
-      // succeed: number;
-
-      state.graphicData[0].x =
-        state.percent[0] > minimumPercent ? labels[0] + percent[0] : '';
-      state.graphicData[0].y = resultChart.error;
-      state.graphicData[1].x =
-        state.percent[1] > minimumPercent ? labels[1] + percent[1] : '';
-      state.graphicData[1].y = resultChart.writeByHand;
-      state.graphicData[2].x =
-        state.percent[2] > minimumPercent ? labels[2] + percent[2] : '';
-      state.graphicData[2].y = resultChart.noRead;
-      state.graphicData[3].x =
-        state.percent[3] > minimumPercent ? labels[3] + percent[3] : '';
-      state.graphicData[3].y = resultChart.succeed;
-
-      //console.log(state.graphicData);
-      //console.log(state.percent);
-
-      state.detailDB = detailDB;
-
-      return { ...state };
-    });
-  });
-};
-
-export const onDeInit = (navigation: Omit<NavigationProp<ReactNavigation.RootParamList>, "getState"> & {
-    getState(): Readonly<{
-      key: string; index: number; //'Bất thường',
-      //'Bất thường',
-      routeNames: string[]; history?: unknown[] | undefined; routes: NavigationRoute<ParamListBase, string>[]; type: string; stale: false;
-    }> | undefined;
-  }) => {
-  navigation.removeListener('focus', () => {});
-  navigation.removeListener('beforeRemove', () => {});
-};
-
-const getUniqueStationCode = (dataDB: PropsKHCMISModel[]): string[] => {
-  const stationSet = new Set<string>();
-  for (let item of dataDB) {
-    stationSet.add(item.MA_TRAM);
-  }
-
-  return Array.from(stationSet);
-};
-const getUniqueBookCode = (
-  dataDB: PropsKHCMISModel[],
-  stationCode: string,
-): string[] => {
-  const arrSet = new Set<string>();
-  for (let item of dataDB) {
-    if (item.MA_TRAM === stationCode) {
-      arrSet.add(item.MA_QUYEN);
-    }
-  }
-  return Array.from(arrSet);
-};
-const getUniqueColumnCode = (
-  dataDB: PropsKHCMISModel[],
-  stationCode: string,
-  bookCode: string,
-): string[] => {
-  const arrSet = new Set<string>();
-  for (let item of dataDB) {
-    if (item.MA_TRAM === stationCode && item.MA_QUYEN === bookCode) {
-      arrSet.add(item.MA_COT);
-    }
-  }
-  return Array.from(arrSet);
-};
-
-const getInfoColumn = (
-  dataDB: PropsKHCMISModel[],
-  stationCode: string,
-  bookCode: string,
-  column: string,
-): PropsItemColumn => {
-  const result = {} as PropsItemColumn;
-  result.totalBCS = 0;
-  result.totalMeter = 0;
-  result.totalSucceed = 0;
-  const arrSet = new Set<string>();
-  for (let item of dataDB) {
-    if (
-      item.MA_TRAM === stationCode &&
-      item.MA_QUYEN === bookCode &&
-      item.MA_COT === column
-    ) {
-      arrSet.add(item.MA_COT);
-      if (
-        IsReadRFSucceed(item.LoaiDoc as TYPE_READ_RF) ||
-        IsWriteByHand(item.LoaiDoc as TYPE_READ_RF)
-      ) {
-        result.totalSucceed++;
-      }
-      result.totalBCS++;
-    }
-  }
-
-  result.totalMeter = arrSet.size;
-  result.columnName = column;
-
-  return result;
-};
-
-const getItemBook = (
-  dataDB: PropsKHCMISModel[],
-  station: string,
-  book: string,
-): PropsItemBook => {
-  const itemBook = {} as PropsItemBook;
-
-  const listColumn = getUniqueColumnCode(dataDB, station, book).sort();
-  const arrItemColumn: PropsItemColumn[] = [];
-  for (let column of listColumn) {
-    arrItemColumn.push(getInfoColumn(dataDB, station, book, column));
-  }
-
-  itemBook.bookName = book;
-  itemBook.totalBCS = 0;
-  itemBook.totalMeter = 0;
-  itemBook.totalSucceed = 0;
-  itemBook.listColumn = arrItemColumn;
-  for (let item of arrItemColumn) {
-    itemBook.totalBCS += item.totalBCS;
-    itemBook.totalMeter += item.totalMeter;
-    itemBook.totalSucceed += item.totalSucceed;
-  }
-
-  return itemBook;
-};
-
-const getItemStation = (
-  dataDB: PropsKHCMISModel[],
-  station: string,
-): PropsItemStation => {
-  const itemStation = {} as PropsItemStation;
-
-  const listItemBook: PropsItemBook[] = [];
-  const listBook = getUniqueBookCode(dataDB, station);
-  for (let book of listBook) {
-    listItemBook.push(getItemBook(dataDB, station, book));
-  }
-
-  itemStation.stationName = station;
-  itemStation.totalBCS = 0;
-  itemStation.totalMeter = 0;
-  itemStation.totalSucceed = 0;
-  itemStation.listBook = listItemBook;
-  for (let item of listItemBook) {
-    itemStation.totalBCS += item.totalBCS;
-    itemStation.totalMeter += item.totalMeter;
-    itemStation.totalSucceed += item.totalSucceed;
-  }
-
-  return itemStation;
-};
-
-const getDbDetail = (dataDB: PropsKHCMISModel[]): PropsItemStation[] => {
-  const listItemStation: PropsItemStation[] = [];
-  const listStation = getUniqueStationCode(dataDB);
-  for (let station of listStation) {
-    listItemStation.push(getItemStation(dataDB, station));
-  }
-
-  return listItemStation;
-};
+  

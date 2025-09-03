@@ -16,8 +16,9 @@ async function requestBlePermissions() {
 }
 
 export async function onBlePress() {
+  console.log ('onBlePress')
   // Xin quyền nếu cần
-  await requestBlePermissions();
+  //await requestBlePermissions();
 
   const connectState = store.state.hhu.connect;
   console.log('Trạng thái kết nối hiện tại:', connectState);
@@ -36,48 +37,50 @@ export async function onBlePress() {
     console.log('Đang kết nối, bỏ qua thao tác...');
     return;
   }
-
-  // CONNECTED → hỏi ngắt kết nối
-  Alert.alert(
-    'Ngắt kết nối Bluetooth?',
-    'Bạn có muốn ngắt kết nối thiết bị Bluetooth không?',
-    [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Ngắt kết nối',
-        onPress: async () => {
-          try {
-            let peripheralId = ObjSend.id;
-
-            if (!peripheralId) {
-              let peripherals: any[] = [];
-              if (Platform.OS === 'android') {
-                // Android: lấy các thiết bị đã paired
-                peripherals = await BleManager.getBondedPeripherals();
+  if (connectState === 'CONNECTED') {
+    Alert.alert(
+      'Ngắt kết nối Bluetooth?',
+      'Bạn có muốn ngắt kết nối thiết bị Bluetooth không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Ngắt kết nối',
+          onPress: async () => {
+            try {
+              let peripheralId = ObjSend.id;
+  
+              if (!peripheralId) {
+                let peripherals: any[] = [];
+                if (Platform.OS === 'android') {
+                  // Android: lấy các thiết bị đã paired
+                  peripherals = await BleManager.getBondedPeripherals();
+                }
+                if (peripherals.length > 0) {
+                  peripheralId = peripherals[0].id;
+                }
               }
-              if (peripherals.length > 0) {
-                peripheralId = peripherals[0].id;
+  
+              if (peripheralId) {
+                console.log('Ngắt kết nối với:', peripheralId);
+                await BleManager.disconnect(peripheralId);
+                store.setState(state => {
+                  state.hhu.idConnected = '';
+                  state.hhu.connect = 'DISCONNECTED';
+                  return { ...state };
+                });
+              } else {
+                console.log('Không tìm thấy thiết bị để ngắt kết nối.');
               }
+            } catch (err) {
+              console.log('Lỗi khi ngắt kết nối:', err);
             }
-
-            if (peripheralId) {
-              console.log('Ngắt kết nối với:', peripheralId);
-              await BleManager.disconnect(peripheralId);
-              store.setState(state => {
-                state.hhu.connect = 'DISCONNECTED';
-                state.hhu.idConnected = '';
-                return { ...state };
-              });
-            } else {
-              console.log('Không tìm thấy thiết bị để ngắt kết nối.');
-            }
-          } catch (err) {
-            console.log('Lỗi khi ngắt kết nối:', err);
-          }
+          },
         },
-      },
-    ]
-  );
+      ]
+    );
+  }
+  // CONNECTED → hỏi ngắt kết nối
+
 }
 
 export function onBleLongPress() {

@@ -66,7 +66,7 @@ export const LoginScreen = () => {
             <Text style={styles.title}>HU-03</Text>
           </View>
 
-          <View style={styles.formContainer}>
+          <View style={styles.formContainer}> 
             <FormInput
               onChangeText={text =>
                 hookProps.setState(state => {
@@ -124,15 +124,12 @@ export const LoginScreen = () => {
 
         <View style={[styles.footer, { paddingBottom: safeAreaInset.bottom }]}>
           <Text style={styles.version}>Phiên bản: {version}</Text>
-          {(store.state.appSetting.loginMode === 'NPC' ||
-            store.state.appSetting.loginMode === 'ĐL Hà Nội') && (
             <Text style={styles.version}>
               {store.state.appSetting.server.host +
                 (store.state.appSetting.server.port.length > 0
                   ? ':' + store.state.appSetting.server.port
                   : '')}
             </Text>
-          )}
         </View>
       </KeyboardAvoidingView>
     </ImageBackground>

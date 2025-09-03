@@ -23,10 +23,6 @@ type PropsHookState = {
   password: string;
   imeiDevice: string;
   btnSignInBusy: boolean;
-  loginMode: {
-    label: string;
-    value: LoginModeType;
-  }[];
   showPassword: boolean;
 };
 
@@ -47,21 +43,6 @@ export const GetHookProps = (): PropsHook => {
     password: '',
     imeiDevice: '',
     btnSignInBusy: false,
-    loginMode: [
-      {
-        label: 'ĐL Hà Nội',
-        value: 'ĐL Hà Nội',
-      },
-
-      {
-        label: 'NPC',
-        value: 'NPC',
-      },
-      {
-        label: 'KH Lẻ',
-        value: 'KH Lẻ',
-      },
-    ],
     showPassword: false,
   });
   hookProps.state = state;
@@ -71,7 +52,6 @@ export const GetHookProps = (): PropsHook => {
 
   navigation = useNavigation<StackRootNavigationProp>();
 
-  hookProps.refPassword = React.createRef<TextInput>();
 
   return hookProps;
 };
@@ -107,7 +87,6 @@ export const onInit = async () => {
       } finally {
       }
 
-      olState.loginMode = appSetting.loginMode;
 
       // console.log('appSetting', appSetting);
 
@@ -124,8 +103,7 @@ export const onInit = async () => {
       } else {
         if (
           firstTime &&
-          typeTouchID === 'TouchID' &&
-          appSetting.loginMode === 'NPC'
+          typeTouchID === 'TouchID' 
         ) {
           firstTime = false;
           console.log('here');

@@ -3,21 +3,20 @@ import { DrawerParamsList } from '../navigation/model/model';
 import { StackViewDataNavigator } from '../navigation/StackViewData';
 import { StackWriteBookCodeNavigator } from '../navigation/StackWriteByBookCode';
 import { StackWriteColumnCodeNavigator } from '../navigation/StackWriteByColumnCode';
-import { AboutScreen } from '../screen/about';
 import { BoardBLEScreen } from '../screen/boardBLE';
-import { ExportXmlScreen } from '../screen/exportXml';
-import { ImportXmlScreen } from '../screen/importXml';
 import { OverViewScreen } from '../screen/overview';
 import { AutomaticReadScreen } from '../screen/automaticRead';
 import { ManualReadScreen } from '../screen/manualRead';
 import { StatisticsScreen} from '../screen/statistics'
-import { ReadParameterScreen } from '../screen/readParameter';
-import { SettingAndAlarmScreen } from '../screen/settingAndAlarm';
+import { SystemSettingScreen } from '../screen/settingAndAlarm';
 import {ConfigMeterScreen} from '../screen/configMeter';
 import VersionCheck from 'react-native-version-check';
 import { StackDataLogNavigator } from '../navigation/StackDataLog';
-import { ImportExportCSDLScreen } from '../screen/importexportCSDL';
 import { JSX } from 'react';
+import { ImportMeterScreen } from '../screen/importMeter';
+import { RealDataMeterScreen } from '../screen/readDataMeter';
+import { DetailLineScreen } from '../screen/detailLine';
+import { DetailMeterScreen } from '../screen/detailMeter';
 
 export const version = VersionCheck.getCurrentVersion();
 
@@ -72,7 +71,7 @@ export const screenDatas: DataScreensProps = [
     `,
     id: 'SettingAndAlarm',
     icon: 'settings',
-    component: SettingAndAlarmScreen,
+    component: SystemSettingScreen,
   },
   {
     title: 'Thiết bị cầm tay',
@@ -91,10 +90,38 @@ export const screenDatas: DataScreensProps = [
     component: StatisticsScreen,
   },
   {
+    title: 'Danh sách đồng hồ',
+    info: 'Thống kê',
+    id: 'DetailLine',
+    icon: 'chart-bar',
+    component: DetailLineScreen,
+  },
+  {
+    title: 'Dữ liệu đồng hồ',
+    info: 'Thống kê',
+    id: 'DetailMeter',
+    icon: 'chart-bar',
+    component: DetailMeterScreen,
+  },
+  {
     title: 'Cấu hình',
     info: 'Cấu hình',
     id: 'ConfigMeter',
     icon: 'chart-bar',
     component: ConfigMeterScreen,
+  },
+  {
+    title: 'Đọc dữ liệu đồng hồ',
+    info: 'Lấy danh sách đồng hồ',
+    id: 'ReadDataMeter',
+    icon: 'chart-bar',
+    component: RealDataMeterScreen,
+  },
+  {
+    title: 'Lấy danh sách đồng hồ',
+    info: 'Lấy danh sách đồng hồ',
+    id: 'ImportMeter',
+    icon: 'chart-bar',
+    component: ImportMeterScreen,
   },
 ];

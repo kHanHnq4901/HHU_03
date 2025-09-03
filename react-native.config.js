@@ -3,22 +3,5 @@ module.exports = {
     ios: {},
     android: {},
   },
-  assets: ['./src/asset/font'],
-  dependencies: {
-    'react-native-vector-icons': {
-      platforms: {
-        ios: null,
-      },
-    },
-    "react-native-sqlite-storage": {
-      platforms: {
-        android: {
-          sourceDir:
-            "../node_modules/react-native-sqlite-storage/platforms/android-native",
-          packageImportPath: "import io.liteglue.SQLitePluginPackage;",
-          packageInstance: "new SQLitePluginPackage()"
-        }
-      }
-    },
-  },
+  assets: ['./src/asset/font'], // chỉ để load font tùy chỉnh
 };

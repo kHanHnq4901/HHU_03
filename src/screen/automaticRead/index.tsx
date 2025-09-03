@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,10 +8,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { GetHook, onDeInit, onInit } from './controller';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
-import { store } from '../login/controller';
+import { GetHookProps, hookProps, store } from './controller';
 import Geolocation from '@react-native-community/geolocation';
 import {
   MapView,
@@ -21,160 +18,20 @@ import {
   FillLayer,
 } from '@track-asia/trackasia-react-native';
 import * as turf from '@turf/turf';
+import { LoadingOverlay } from '../../component/loading ';
+import { requestLocationPermission, startWatchingPosition, stopWatchingPosition } from './handleButton';
 
 export const AutomaticReadScreen = () => {
-  GetHook();
-  const [meters, setMeters] = React.useState<any[]>([]);
+  GetHookProps();
   const [selectedMeter, setSelectedMeter] = React.useState<any | null>(null);
-  const [currentLocation, setCurrentLocation] = React.useState<[number, number]>([105.8544, 21.0285]); // Hà Nội mặc định
-  const [isLoading, setIsLoading] = React.useState(true); // Loading trạng thái vị trí
 
-  const watchId = React.useRef<number | null>(null);
-
-  React.useEffect(() => {
+  useEffect(() => {
     requestLocationPermission();
-    fetchMeters();
     return () => {
-      if (watchId.current !== null) {
-        Geolocation.clearWatch(watchId.current);
-      }
+      stopWatchingPosition();
     };
   }, []);
-
-  const requestLocationPermission = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.warn('Quyền truy cập vị trí bị từ chối');
-          setIsLoading(false);
-          return;
-        }
-      }
-      startWatchingPosition();
-    } catch (err) {
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
-
-  const startWatchingPosition = () => {
-    // Lấy vị trí tức thì
-    Geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        if (!isNaN(longitude) && !isNaN(latitude)) {
-          setCurrentLocation([longitude, latitude]);
-        }
-        setIsLoading(false);
-      },
-      (err) => {
-        console.error('Lỗi lấy vị trí ban đầu:', err);
-        setIsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
-
-    // Theo dõi liên tục
-    watchId.current = Geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        if (!isNaN(longitude) && !isNaN(latitude)) {
-          setCurrentLocation([longitude, latitude]);
-        }
-      },
-      (err) => console.error('Lỗi lấy vị trí:', err),
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 10,
-        interval: 2000,
-        fastestInterval: 2000,
-        maximumAge: 1000,
-      }
-    );
-  };
-
-  const fetchMeters = async () => {
-    try {
-      const res = await axios.get('http://14.225.244.63:8088/api/GetMeterAccount', {
-        params: {
-          userID: store.state.DLHNUser.moreInfoUser.userId,
-          token: store.state.DLHNUser.moreInfoUser.token,
-        },
-      });
-        
-      if (Array.isArray(res.data)) {
-        setMeters(res.data);
-      } else {
-        console.warn('API trả về không phải array:', res.data);
-      }
-    } catch (err) {
-      console.error('❌ Lỗi khi gọi API GetMeterAccount:', err);
-    }
-  };
-
-  const getCircleGeoJSON = (center: [number, number], radiusInMeters = 500) => {
-    return turf.circle(center, radiusInMeters / 1000, { steps: 64, units: 'kilometers' });
-  };
-
-  const mapElement = React.useMemo(() => (
-    <MapView
-      style={styles.map}
-      mapStyle="https://maps.track-asia.com/styles/v2/streets.json?key=public_key"
-      compassEnabled
-      zoomEnabled
-      scrollEnabled
-      rotateEnabled
-    >
-      <Camera
-        zoomLevel={15}
-        centerCoordinate={currentLocation}
-      />
-
-      {/* Marker vị trí hiện tại */}
-      <PointAnnotation
-        key="current-location"
-        id="current-location"
-        coordinate={currentLocation}
-      >
-        <View style={styles.currentLocationDot} />
-      </PointAnnotation>
-
-      {/* Marker đồng hồ */}
-      {meters.map((meter, index) => {
-        const longitude = parseFloat(meter.LONGITUDE);
-        const latitude = parseFloat(meter.LATITUDE);
-        if (!isNaN(longitude) && !isNaN(latitude)) {
-          return (
-            <PointAnnotation
-              key={`meter-${index}`}
-              id={`meter-${index}`}
-              coordinate={[longitude, latitude]}
-              onSelected={() => setSelectedMeter(meter)}
-            >
-              <View style={styles.dot} />
-            </PointAnnotation>
-          );
-        }
-        return null;
-      })}
-
-      {/* Vẽ vòng tròn */}
-      <ShapeSource id="circle" shape={getCircleGeoJSON(currentLocation)}>
-        <FillLayer
-          id="circleFill"
-          style={{
-            fillColor: 'rgba(0,150,255,0.2)',
-            fillOutlineColor: 'rgba(0,150,255,0.8)',
-          }}
-        />
-      </ShapeSource>
-    </MapView>
-  ), [meters, currentLocation]);
-
-  if (isLoading) {
+  if (!hookProps.state.currentLocation) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007bff" />
@@ -183,10 +40,82 @@ export const AutomaticReadScreen = () => {
     );
   }
 
+  // Nếu có vị trí -> render map và các thành phần khác
+  const mapElement = useMemo(
+    () => (
+      <MapView
+        style={styles.map}
+        mapStyle="https://maps.track-asia.com/styles/v2/streets.json?key=f4a6c08959b47211756357354b1b73ac74"
+        compassEnabled
+        zoomEnabled
+        scrollEnabled
+        rotateEnabled
+        pitchEnabled
+        attributionEnabled
+      >
+        <Camera zoomLevel={15} centerCoordinate={hookProps.state.currentLocation} />
+
+        <PointAnnotation
+          key="current-location"
+          id="current-location"
+          coordinate={hookProps.state.currentLocation}
+        >
+          <View style={styles.currentLocationDot} />
+        </PointAnnotation>
+
+        {hookProps.state.listMeter.map((meter, index) => {
+          if (!meter.COORDINATE) return null;
+
+          const [latStr, lonStr] = meter.COORDINATE.split(',').map((v) => v.trim());
+          const latitude = parseFloat(latStr);
+          const longitude = parseFloat(lonStr);
+
+          if (!isNaN(latitude) && !isNaN(longitude)) {
+            return (
+              <PointAnnotation
+                key={`${index}`}
+                id={`${index}`}
+                coordinate={[longitude, latitude]}
+                onSelected={() => setSelectedMeter(meter)}
+              >
+                <View style={styles.dot} />
+              </PointAnnotation>
+            );
+          }
+          return null;
+        })}
+
+        {/* Vẽ vòng tròn quanh vị trí hiện tại */}
+        <ShapeSource
+          id="circle"
+          shape={turf.circle(
+            hookProps.state.currentLocation as [number, number],
+            Number(store.state.appSetting.setting.distance) / 1000,
+            { steps: 64, units: 'kilometers' }
+          )}
+        >
+          <FillLayer
+            id="circleFill"
+            style={{
+              fillColor: 'rgba(0,150,255,0.2)',
+              fillOutlineColor: 'rgba(0,150,255,0.8)',
+            }}
+          />
+        </ShapeSource>
+      </MapView>
+    ),
+    [hookProps.state.listMeter, hookProps.state.currentLocation]
+  );
+
   return (
     <View style={{ flex: 1 }}>
+      <LoadingOverlay
+        visible={hookProps.state.isLoading}
+        message={hookProps.state.textLoading}
+      />
       {mapElement}
 
+      {/* Popup chi tiết khi chọn meter */}
       {selectedMeter && (
         <View style={styles.fixedPopup}>
           <Text style={styles.popupTitle}>Thông tin đồng hồ nước</Text>
@@ -202,9 +131,62 @@ export const AutomaticReadScreen = () => {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Status Bar */}
+      <View style={styles.statusBar}>
+        <View style={[styles.statusItem, { backgroundColor: '#f44336' }]}>
+          <Text style={styles.statusNumber}>
+            {hookProps.state.statusCount[2] || 0}
+          </Text>
+          <Text style={styles.statusLabel}>Thất bại</Text>
+        </View>
+
+        <View style={[styles.statusItem, { backgroundColor: '#9e9e9e' }]}>
+          <Text style={styles.statusNumber}>
+            {hookProps.state.statusCount[0] || 0}
+          </Text>
+          <Text style={styles.statusLabel}>Chưa đọc</Text>
+        </View>
+
+        <View style={[styles.statusItem, { backgroundColor: '#4caf50' }]}>
+          <Text style={styles.statusNumber}>
+            {hookProps.state.statusCount[1] || 0}
+          </Text>
+          <Text style={styles.statusLabel}>Đã đọc</Text>
+        </View>
+
+        <View style={[styles.statusItem, { backgroundColor: '#ff9800' }]}>
+          <Text style={styles.statusNumber}>
+            {hookProps.state.statusCount[4] || 0}
+          </Text>
+          <Text style={styles.statusLabel}>Cảnh báo</Text>
+        </View>
+      </View>
+
+      {/* Floating Start/Stop Button */}
+      <TouchableOpacity
+        style={[
+          styles.floatingButton,
+          { backgroundColor: hookProps.state.isAutoReading ? '#f44336' : '#4caf50' },
+        ]}
+        onPress={() => {
+          if (hookProps.state.isAutoReading) {
+            hookProps.setState((prev) => ({ ...prev, isAutoReading: false }));
+            console.log('⏹️ Dừng đọc chỉ số tự động');
+          } else {
+            hookProps.setState((prev) => ({ ...prev, isAutoReading: true }));
+            console.log('▶️ Bắt đầu đọc chỉ số tự động');
+          }
+        }}
+      >
+        <Text style={styles.floatingButtonText}>
+          {hookProps.state.isAutoReading ? 'Kết thúc' : 'Bắt đầu'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
@@ -231,7 +213,7 @@ const styles = StyleSheet.create({
   },
   fixedPopup: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 90,
     left: 16,
     right: 16,
     backgroundColor: '#fff',
@@ -268,5 +250,50 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  statusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+  },
+  statusItem: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 80, // Nổi lên trên statusBar
+    alignSelf: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  floatingButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  statusNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
+    marginTop: 2,
   },
 });

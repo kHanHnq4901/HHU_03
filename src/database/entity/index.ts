@@ -1,30 +1,23 @@
-import { PropsXmlModel } from '../../xml';
-import { VersionMeter, VersionMeterValue } from '../../service/hhu/defineEM';
-import { LoginModeType } from '../../service/storage';
+export const TABLE_NAME_INFO_METER = 'INFO_METER';
+export const TABLE_NAME_INFO_LINE = 'INFO_LINE';
+export const TABLE_NAME_METER_DATA = 'METER_DATA';
 
-export type PropsAddMoreEntity = {
-  TT: number;
-  id: string;
-  RF: VersionMeterValue;
-  LoaiDoc: string;
-  GhiChu: string;
-  loginMode: LoginModeType;
-  isSent: '0' | '1';
-  latitude: string;
-  longtitude: string;
-  image: string;
-  hasImage: '0' | '1';
-  idFile: string;
+export type PropsMeterDataModel = {
+  TIMESTAMP : string;
+  IMPORT_DATA : string;
+  EXPORT_DATA: string; 
+  EVENT : string;
+  BATTERY : string;
+  PERIOD : string;
+  DATA_RECORD : string; 
+}
+export type PropsLineModel = {
+  LINE_ID : string;
+  LINE_NAME : string ;
+  ADDRESS : string ;
+  CODE : string ; 
 };
 export type PropsMeterModel = {
-  LoaiDoc: TYPE_READ_RF;
-  isSent: string;
-  loginMode: string;
-  MA_QUYEN: any;
-  MA_TRAM: any;
-  RF: string;
-  LOAI_BCS: string;
-  SERY_CTO: string;
   METER_NO: string;
   METER_NAME: string;
   METER_MODEL_DESC: string;
@@ -39,10 +32,9 @@ export type PropsMeterModel = {
   COORDINATE : string ; 
   LINE_ID : string;
   METER_MODEL_ID: string;
+  STATUS : string; 
 };
 export type PropsInfoMeterEntity = PropsMeterModel;
-
-export const TABLE_NAME = 'INFO_METER';
 
 export const dumyEntity: PropsInfoMeterEntity = {
   METER_NO: '',
@@ -59,6 +51,7 @@ export const dumyEntity: PropsInfoMeterEntity = {
   COORDINATE : '',
   LINE_ID : '',
   METER_MODEL_ID: '',
+  STATUS : ''
 };
 
 export function GetStringSelectEntity() {

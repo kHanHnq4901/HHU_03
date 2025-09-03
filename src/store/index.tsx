@@ -2,26 +2,15 @@ import React, { Dispatch, SetStateAction, useState } from 'react';
 import { PropsKHCMISModel } from '../database/model';
 import { getDefaultStorageValue, PropsAppSetting } from '../service/storage';
 import { Platform } from 'react-native';
-import {
-  PropsLoginServerNPCReturn,
-  dateReleaseApi,
-} from '../service/api/serverData';
-import { Device } from 'react-native-ble-plx';
+
 
 export type TYPE_TOUCH_ID = 'FaceID' | 'TouchID' | 'NoSupport';
 
-export type PropsInfoNPCUser = {
-  userName: string;
-  passWord: string;
-  dateReleaseApi: string;
-  imeiDevice: string;
-};
-export type PropsInfoDLHNUser= {
+export type PropsInfoUser= {
   userId : string ;
   userName: string;
   passWord: string;
   token: string;
-  imeiDevice: string;
 };
 
 type PropsState = {
@@ -35,7 +24,6 @@ type PropsState = {
     version: string;
     shortVersion: string;
     rssi: number;
-    device: Device ;
   };
   net: {
     netconnected: boolean;
@@ -63,20 +51,17 @@ type PropsState = {
 
   userRole: 'customer' | 'dvkh' | 'admin' | 'sx';
   typeTouchID: TYPE_TOUCH_ID;
-  NPCUser: {
-    user: PropsLoginServerNPCReturn;
-    moreInfoUser: PropsInfoNPCUser;
-  };
-  DLHNUser: {
+
+  infoUser: {
     //user: PropsLoginServerReturn;
-    moreInfoUser: PropsInfoDLHNUser;
+    moreInfoUser: PropsInfoUser;
   };
   isCredential: boolean;
   
 };
 
 type PropsDataDB = {
-  item: PropsKHCMISModel;
+  item: PropsKHCMISModel; 
   id: string;
 };
 
@@ -103,7 +88,7 @@ export const StoreProvider = ({ children }) => {
     hhu: {
       isConnected: false,
       connect: 'DISCONNECTED',
-      idConnected: null,
+      idConnected: '',
       version: '',
       shortVersion: '',
       rssi: 0,
@@ -136,21 +121,12 @@ export const StoreProvider = ({ children }) => {
     },
     userRole: 'customer',
     typeTouchID: Platform.OS === 'ios' ? 'FaceID' : 'TouchID',
-    NPCUser: {
-      user: {} as PropsLoginServerNPCReturn,
-      moreInfoUser: {
-        userName: '',
-        passWord: '',
-        dateReleaseApi: dateReleaseApi,
-        imeiDevice: '',
-      },
-    },
-    DLHNUser: {
-      moreInfoUser: {
+    infoUser: {
+      moreInfoUser : {
         userName: '',
         passWord: '',
         token: '',
-        imeiDevice: '',
+        userId: ''
       }
     },
     isCredential: false,

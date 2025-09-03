@@ -21,7 +21,7 @@ import {
   onInit,
   onDeInit
 } from './controller';
-import { connectHandle, onScanPress } from './handleButton';
+import { connectHandle, disConnect, onScanPress } from './handleButton';
 import { StackRootParamsList } from '../../navigation/model/model';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -74,6 +74,7 @@ export const SetUpBleScreen = () => {
   const navigation = useNavigation<StackNavigationProp<StackRootParamsList>>();
   useEffect(() => {
     onInit(navigation);
+    onScanPress();
     return () => onDeInit();
   }, []);
   
@@ -131,8 +132,16 @@ export const SetUpBleScreen = () => {
           </>
         )}
       </ScrollView>
+      {store.state.hhu.connect === 'CONNECTED' && (
+        <TouchableOpacity
+          onPress={() => {disConnect(store.state.hhu.idConnected)
+          }}
+          style={[styles.fab, { bottom: 90, backgroundColor: '#d9534f' }]} // đỏ + đặt cao hơn
+        >
+          <Icon name="unlink" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
 
-      {/* Nút quét nổi */}
       <TouchableOpacity
         onPress={onScanPress}
         style={styles.fab}

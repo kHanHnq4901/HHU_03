@@ -1,28 +1,17 @@
 import { CMISKHServices } from '.';
 import { GetFileListMatchVersionMeter } from '../../service/api';
-import {
-  PropsMeterSpecies,
-  VersionMeterValue,
-  getLabelAndIsManyPriceByCodeMeter,
-  getTypeMeterBySerial,
-} from '../../service/hhu/defineEM';
+
 import {
   getVersionUpdateFileMatchSeriVersion,
   saveVersionUpdateFileMatchSeriVersion,
 } from '../../service/storage';
 import { showAlert, showToast } from '../../util';
-import { PropsMatchSeriVersionEntity } from '../entity/matchSeriVersion';
 import { dataDBTabel } from '../model';
 import { InfoMeterRepository, PropsCondition } from '../repository';
-import {
-  MatchSeriVersionRepository,
-  checkTableDBIfExist,
-  deleteDataDB,
-} from '../repository/matchSeriVersionRepository';
+
 
 const TAG = 'matchSeriVersionRepository:';
 
-export let dataDBMatchSeriVersion: PropsMatchSeriVersionEntity[] = [];
 
 type ObjMinMax = {
   min: number;

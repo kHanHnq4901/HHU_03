@@ -1,7 +1,7 @@
 import * as Ble from '../../util/ble';
 import AsyncStorage from '@react-native-community/async-storage';
 import { Buffer } from 'buffer';
-import { HhuObj, ObjSend, readVersion, ShakeHand, waitHHU } from './hhuFunc';
+import { HhuObj, ObjSend, readVersion, waitHHU } from './hhuFunc';
 import {
   BufferToString,
   ByteArrayToString,
@@ -9,13 +9,12 @@ import {
   showToast,
   sleep,
 } from '../../util';
-import BleManager from 'react-native-ble-plx';
 import { PropsStore } from '../../store';
 import { checkUpdateHHU } from '../api';
 import { Platform } from 'react-native';
 import { bleManagerEmitter } from '../../screen/ble/controller';
-import { manager } from '../../screen/ble/handleButton';
-
+import BleManager from 'react-native-ble-manager';
+import { responeSetting } from '../../screen/configMeter/controller';
 const KEY_STORAGE = 'BLE_INFO';
 const TAG = 'Ble Func:';
 
@@ -64,7 +63,7 @@ export const BleFunc_Send = async (id: string, data: number[]) => {
     for (let i = 0; i < data.length; i++) {
       dumy.push(data[i]);
     }
-
+    console.log (dumy)
     await Ble.send(id,dumy);
 
   } catch (err: any) {
@@ -74,11 +73,9 @@ export const BleFunc_Send = async (id: string, data: number[]) => {
 
 
 export const BleFunc_SaveStorage = async (id: string) => {
-  const item: PropsBleInfo = {
-    id: id,
-  };
+  const item: PropsBleInfo = { id };
   try {
-    AsyncStorage.setItem(KEY_STORAGE, JSON.stringify(item));
+    await AsyncStorage.setItem(KEY_STORAGE, JSON.stringify(item));
   } catch (err: any) {
     console.log(TAG, String(err));
   }
@@ -87,48 +84,64 @@ export const BleFunc_SaveStorage = async (id: string) => {
 export const BleFunc_TryConnectToLatest = async (): Promise<{
   result: boolean;
   id: string;
+  name: string;
 }> => {
   try {
     const resString = await AsyncStorage.getItem(KEY_STORAGE);
-    if (resString) {
-      const data = JSON.parse(resString) as PropsBleInfo;
-      let result: boolean = false; // hoặc true tùy logic
 
-      console.log('try connect to data.id: ', data.id);
-      // if (Platform.OS === 'ios') {
-      //   await BleManager.refreshCache(data.id);
-      // }
-      for (let i = 0; i < 1; i++) {
-        result = await Ble.connect(data.id);
-
-        console.log('Connect result: ', result);
-        if (result) {
-          break;
-          // await Ble.startnotification(data.id);
-          // const dumy = [0];
-          // await Ble.send(data.id, dumy);
-          // await Ble.stopNotification(data.id);
-        }
-        await sleep(500);
-      }
-
-      return { result: result, id: data.id };
-    } else {
-      return { result: false, id: '' };
+    if (!resString) {
+      return { result: false, id: '', name: '' };
     }
+
+    const data = JSON.parse(resString) as PropsBleInfo;
+    console.log('Try connect to device id:', data.id);
+
+    // Thử kết nối lại tối đa 3 lần
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await BleManager.connect(data.id);
+        console.log(`Attempt ${attempt}: Connected to ${data.id}`);
+
+        // 🔍 Lấy thông tin thiết bị sau khi kết nối
+        let deviceInfo: any = null;
+        try {
+          deviceInfo = await BleManager.retrieveServices(data.id);
+        } catch (infoErr) {
+          console.log('⚠️ retrieveServices failed:', infoErr);
+        }
+
+        const deviceName =
+          deviceInfo?.name ||
+          deviceInfo?.advertising?.localName ||
+          'Unknown Device';
+
+        return { result: true, id: data.id, name: deviceName };
+      } catch (err) {
+        console.log(`Attempt ${attempt}: Connect failed`, err);
+        await sleep(500); // nghỉ 500ms rồi thử lại
+      }
+    }
+
+    // Nếu thử hết 3 lần mà vẫn fail
+    return { result: false, id: data.id, name: '' };
   } catch (err: any) {
-    console.log(TAG, String(err) + new Error().stack);
+    console.log(TAG, 'BleFunc_TryConnectToLatest Error:', err);
+    return { result: false, id: '', name: '' };
   }
-  return { result: false, id: '' };
 };
 
+
+
+
+
 export async function initModuleBle() {
-  await manager.state({ showAlert: false });
+  await BleManager.start({ showAlert: false });
 }
 
 export const connectLatestBLE = async (store: PropsStore) => {
-  console.log(TAG, 'try connect to latest');
+  console.log(TAG, '🔄 Try connect to latest device...');
 
+  // Cập nhật trạng thái: Đang kết nối
   store.setState(state => {
     state.hhu.connect = 'CONNECTING';
     return { ...state };
@@ -138,178 +151,128 @@ export const connectLatestBLE = async (store: PropsStore) => {
 
   try {
     if (Platform.OS === 'android') {
-      await manager.enable; // Android: bật bluetooth
+      try {
+        await BleManager.enableBluetooth();
+        console.log("✅ Bluetooth enabled (Android)");
+      } catch (err) {
+        console.log("❌ User refused to enable Bluetooth (Android)", err);
+        isEnable = false;
+      }
     } else {
-      //manager.checkState(); // iOS: check trạng thái
-
+      // iOS: check trạng thái qua listener
       const statePromise = new Promise<boolean>((resolve) => {
-        const sub = bleManagerEmitter.addListener(
-          'BleManagerDidUpdateState',
-          ({ state }) => {
-            console.log('iOS Bluetooth State:', state);
-            sub.remove(); // remove listener sau khi nhận được trạng thái
+        const sub = BleManager.onDidUpdateState(
+          ({ state }: { state: string }) => {
+            console.log('ℹ️ iOS Bluetooth State:', state);
+            sub.remove();
             resolve(state === 'on');
           }
         );
 
-        // fallback timeout nếu không có phản hồi
+        // fallback timeout 3s
         setTimeout(() => {
           sub.remove();
-          resolve(false); // assume off nếu không có phản hồi
+          resolve(false);
         }, 3000);
       });
 
       isEnable = await statePromise;
     }
   } catch (error) {
-    console.log(TAG, 'Bluetooth check failed', error);
+    console.log(TAG, '❌ Bluetooth check failed', error);
     isEnable = false;
   }
 
+  // Nếu Bluetooth chưa bật → báo & thoát
   if (!isEnable) {
     store.setState(state => {
+      state.hhu.name = '';
+      state.hhu.idConnected = '';
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
-    showAlert('Thiết bị chưa được bật Bluetooth');
-    return;
+    showAlert('Vui lòng bật Bluetooth trước khi kết nối thiết bị');
+    return { result: false, id: '' };
   }
 
-  showToast('Đang thử kết nối với thiết bị Bluetooth trước đó ...');
+  // Bắt đầu thử kết nối
+  showToast('Đang thử kết nối với thiết bị Bluetooth đã lưu...');
   const data = await BleFunc_TryConnectToLatest();
   console.log(TAG, 'Kết quả kết nối:', data);
 
   if (data.result) {
-    let rssi: number = 0;
-
+    // Thành công
     store.setState(state => {
+      state.hhu.name = data.name;
       state.hhu.connect = 'CONNECTED';
       state.hhu.idConnected = data.id;
-      state.hhu.rssi = rssi;
+      state.hhu.rssi = 0;
       return { ...state };
     });
 
     ObjSend.id = data.id;
-    ObjSend.isShakeHanded = false;
 
-    for (let k = 0; k < 2; k++) {
-      await sleep(500);
-      const result = await ShakeHand();
-      if (result === true || result === 1) {
-        ObjSend.isShakeHanded = true;
-        break;
-      }
-      console.log(TAG, 'Try shakehand lần', k + 1);
-    }
+    showToast('Kết nối thành công');
+    BleFunc_StartNotification(data.id)
+    console.log(TAG, `Connected to device: ${data.id}`);
 
-    if (!ObjSend.isShakeHanded) {
-      console.log(TAG, 'ShakeHand thất bại. Ngắt kết nối');
-      showToast('ShakeHand thất bại. Đã ngắt kết nối');
-      await manager.disable(ObjSend.id);
-      store.setState(state => {
-        state.hhu.connect = 'DISCONNECTED';
-        return { ...state };
-      });
-      return;
-    }
-
-    showToast('Bắt tay thành công');
-
-    // đọc version
-    for (let k = 0; k < 2; k++) {
-      await sleep(500);
-      const version = await readVersion();
-      if (version) {
-        const shortVersion = version
-          .split('.')
-          .slice(0, 2)
-          .join('.')
-          .toLowerCase()
-          .replace('v', '');
-
-        store.setState(state => {
-          state.hhu.version = version;
-          state.hhu.shortVersion = shortVersion;
-          return { ...state };
-        });
-
-        console.log(TAG, 'Read version succeed:', version);
-        checkUpdateHHU();
-        break;
-      } else {
-        console.log(TAG, 'Read version failed. Thử lại...');
-      }
-    }
+    return { result: true, id: data.id };
   } else {
+    // Thất bại
     store.setState(state => {
+      state.hhu.name = '';
+      state.hhu.idConnected = '';
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
 
-    console.log(TAG, 'Kết nối thất bại:', data);
-    showToast('Kết nối Bluetooth thất bại');
+    showToast('Không thể kết nối với thiết bị đã lưu. Vui lòng thử lại.');
+    console.log(TAG, 'Failed to connect to latest device');
+
+    return { result: false, id: '' };
   }
 };
 
-export const handleUpdateValueForCharacteristic = (data: {
-  peripheral: string;
-  characteristic: string;
-  value: number[];
-}) => {
-  console.log('handleUpdateValueForCharacteristic' + data.value);
+// Giả sử ta có các hàm xử lý cho từng type
+function handleType1(payload: number[]) {
+  console.log("🔹 Xử lý Type 1:", payload);
+}
 
-  const receiveData = data.value; // chính là mảng byte từ thiết bị
 
-  for (let i = 0; i < receiveData.length; i++) {
-    const rxData = receiveData[i] & 0xff;
+function handleType2(payload: number[]) {
+  console.log("🔹 Xử lý Type 2:", payload);
+}
 
-    if (HhuObj.identityFrame.bActive === false) {
-      HhuObj.identityFrame.bActive = true;
-      HhuObj.identityFrame.u8CountRecIdentity = 0;
-      HhuObj.identityFrame.bIdentityFinish = false;
+export const handleUpdateValueForCharacteristic = (data: { value: number[] }) => {
+  console.log('data update for characteristic:', data.value);
+  const receiveData = data.value;
+
+  const buf = Buffer.from(receiveData);
+
+  if (buf.length >= 8 && buf[0] === 0x02 && buf[1] === 0x08) {
+    console.log("✅ Header hợp lệ");
+    const payload = Array.from(buf.slice(8));
+    switch (buf[2]){
+      case 0x01:
+        handleType1(payload);
+        break;
+      case 0x03:
+        responeSetting(payload);
+        break;
+      case 0x02:
+        handleType2(payload);
+        break;
+      default:
+        console.log("⚠️ Unknown type:", buf[3], payload);
     }
 
-    if (HhuObj.identityFrame.bIdentityFinish === false) {
-      HhuObj.identityFrame.au8IdentityBuff[
-        HhuObj.identityFrame.u8CountRecIdentity
-      ] = rxData;
-      HhuObj.identityFrame.u8CountRecIdentity++;
-
-      if (
-        HhuObj.identityFrame.u8CountRecIdentity ===
-        HhuObj.identityFrame.au8IdentityBuff.length
-      ) {
-        if (
-          HhuObj.identityFrame.au8IdentityBuff[0] === 0xfe &&
-          HhuObj.identityFrame.au8IdentityBuff[1] === 0xfe
-        ) {
-          if (
-            ((HhuObj.identityFrame.au8IdentityBuff[2] +
-              HhuObj.identityFrame.au8IdentityBuff[3]) &
-              0xff) !==
-            (HhuObj.identityFrame.au8IdentityBuff[4] & 0xff)
-          ) {
-            HhuObj.identityFrame.bActive = false;
-          } else {
-            HhuObj.identityFrame.bIdentityFinish = true;
-            HhuObj.identityFrame.u16Length =
-              (HhuObj.identityFrame.au8IdentityBuff[2] & 0xff) |
-              ((HhuObj.identityFrame.au8IdentityBuff[3] & 0xff) << 8);
-            HhuObj.countRec = 0;
-          }
-        } else {
-          HhuObj.identityFrame.bActive = false;
-        }
-      }
-    } else if (HhuObj.identityFrame.bIdentityFinish === true) {
-      HhuObj.buffRx[HhuObj.countRec] = rxData;
-      HhuObj.countRec = (HhuObj.countRec + 1) % HhuObj.buffRx.byteLength;
-
-      if (HhuObj.countRec === HhuObj.identityFrame.u16Length) {
-        HhuObj.flag_rec = true;
-        HhuObj.identityFrame.bActive = false;
-      }
-    }
+    HhuObj.flag_rec = true;
+    HhuObj.identityFrame.bActive = false;
+  } else {
+    console.log("❌ Header không hợp lệ hoặc dữ liệu quá ngắn");
+    HhuObj.identityFrame.bActive = false;
   }
 };
+
+
 

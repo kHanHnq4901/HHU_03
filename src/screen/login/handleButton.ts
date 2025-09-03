@@ -7,20 +7,14 @@ import TouchID from 'react-native-touch-id';
 import * as Keychain from 'react-native-keychain';
 import {
   GetMeterAccount,
-  PropsLoginServerDLHNReturn,
-  PropsLoginServerNPCReturn,
   endPoints,
   login,
-  loginDLHN,
-  loginNPC,
 } from '../../service/api/serverData';
 import { getUserStorage, saveUserStorage } from '../../service/storage/user';
 import { saveValueAppSettingToNvm } from '../../service/storage';
 import { PropsCommonResponse } from '../../service/api';
 import { getDefaultIPPort } from '../settingIPportScreen/handle';
 import DeviceInfo from 'react-native-device-info';
-import SoapRequest from 'react-native-soap-request';
-import xml2js, { parseString } from 'react-native-xml2js';
 import { exportDateToExcel } from '../../util/excel';
 
 const TAG = 'Handle Button Login:';
@@ -71,39 +65,6 @@ export async function onGetImageDevicePress() {
   } catch (err: any) {
     console.log(TAG, err.message);
   }
-}
-
-async function _AuthenticateOffline(pass: string): Promise<boolean> {
-  const hash = await sha256(pass);
-
-  //console.log('hash:', hash);
-  //console.log('storageVariable.passwordSx:', store.state.appSetting.passwordSx);
-
-  if (
-    hash !== store.state.appSetting.password &&
-    hash !== store.state.appSetting.passwordAdmin &&
-    hash !== store.state.appSetting.passwordDVKH &&
-    hash !== store.state.appSetting.passwordSx
-  ) {
-    // console.log('hash:' , hash);
-    // console.log('password:' , store?.state.appSetting.password);
-
-    return false;
-  }
-  store.setState(state => {
-    if (hash === store?.state.appSetting.passwordAdmin) {
-      state.userRole = 'admin';
-    } else if (hash === store?.state.appSetting.passwordDVKH) {
-      state.userRole = 'dvkh';
-    } else if (hash === store?.state.appSetting.passwordSx) {
-      state.userRole = 'sx';
-    } else {
-      state.userRole = 'customer';
-    }
-
-    return { ...state };
-  });
-  return true;
 }
 
 export async function onLoginPress(props?: PropsLogin) {
@@ -201,14 +162,11 @@ export async function onLoginPress(props?: PropsLogin) {
   });
 
   if (loginSucceed) {
-    if (olState.loginMode !== store.state.appSetting.loginMode) {
-      olState.loginMode = store.state.appSetting.loginMode;
-      saveValueAppSettingToNvm(store.state.appSetting);
-    }
+    saveValueAppSettingToNvm(store.state.appSetting);
     console.log('rest : ' + rest.obj)
     GetMeterAccount({
-      userID: store.state.DLHNUser.moreInfoUser.userId,
-      token: store.state.DLHNUser.moreInfoUser.token,
+      userID: store.state.infoUser.moreInfoUser.userId,
+      token: store.state.infoUser.moreInfoUser.token,
     });
     const itemOverView = screenDatas.find(item => item.id === 'Overview');
     navigation.navigate('Drawer', {

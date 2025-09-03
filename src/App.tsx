@@ -43,7 +43,7 @@ export default function App() {
             dark: false,
           }}
         >
-          <CustomStatusBar backgroundColor={Colors.primary} barStyle="light-content" />
+          {/* <CustomStatusBar backgroundColor={Colors.primary} barStyle="light-content" /> */}
           <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: 'white' }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
