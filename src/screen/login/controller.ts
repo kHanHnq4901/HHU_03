@@ -39,8 +39,8 @@ export let navigation = {} as StackRootNavigationProp;
 export const GetHookProps = (): PropsHook => {
   const [state, setState] = useState<PropsHookState>({
     status: '',
-    user: '',
-    password: '',
+    user: 'dangxa',
+    password: 'ktdt123456',
     imeiDevice: '',
     btnSignInBusy: false,
     showPassword: false,

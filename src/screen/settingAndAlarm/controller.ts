@@ -52,7 +52,6 @@ export const GetHookProps = (): PropsHook => {
 export const onInit = async () => {
       const appSetting = await updateValueAppSettingFromNvm();
       // console.log('appSetting', appSetting);
-
       store.setState(state => {
         state.appSetting = appSetting;
         return { ...state };

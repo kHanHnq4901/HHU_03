@@ -1,39 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Platform,
-  ScrollView,
   StyleSheet,
   View,
   InputAccessoryView,
   Keyboard,
-  Alert,
   TextInput,
   FlatList,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { Button } from '../../component/button/button';
 import { Text } from '../../component/Text';
-import { Colors, CommonHeight, normalize, CommonFontSize } from '../../theme';
+import { CommonHeight, normalize, CommonFontSize } from '../../theme';
 import { onReadData } from './handleButton';
-import { hookProps, useHookProps } from './controller';
-import { hook } from '../settingIPportScreen/controller';
+import { GetHookProps, hookProps } from './controller';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const inputAccessoryViewID = 'uniqueID';
 
 export const RealDataMeterScreen = () => {
-  useHookProps();
-  const [meterData, setMeterData] = useState<any>(null);
+  GetHookProps();
+  const { state, setState } = hookProps;
 
-  const renderRecord = ({ item, index }: any) => (
-    <View
-      style={[
-        styles.recordItem,
-        { backgroundColor: index % 2 === 0 ? '#f9fbff' : '#fff' },
-      ]}
-    >
-      <Text style={styles.recordDate}>{item.date}</Text>
-      <Text style={styles.recordValue}>{item.value}</Text>
-    </View>
-  );
+  const toggleDetailedRead = () => {
+    setState((prev) => ({ ...prev, isDetailedRead: !prev.isDetailedRead }));
+  };
 
   return (
     <>
@@ -43,136 +35,169 @@ export const RealDataMeterScreen = () => {
         </InputAccessoryView>
       )}
 
-      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-        {/* Nhập Serial */}
-        <View style={styles.group}>
-          <Text style={styles.label}>🔑 Serial thiết bị</Text>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Serial + toggle chi tiết */}
+        <View style={styles.serialRow}>
           <TextInput
-            placeholder="Nhập Serial VD: 123456789"
-            value={hookProps.state.serial}
+            placeholder="🔢 Nhập serial công tơ"
+            value={state.serial}
             style={styles.textInput}
-            onChangeText={(text) =>
-              hookProps.setState((prev) => ({ ...prev, serial: text }))
-            }
+            placeholderTextColor="#888"
+            onChangeText={(text) => setState((prev) => ({ ...prev, serial: text }))}
           />
+          <TouchableOpacity
+            style={[
+              styles.checkboxContainer,
+              state.isDetailedRead && styles.checkboxContainerActive,
+            ]}
+            onPress={toggleDetailedRead}
+            activeOpacity={0.7}
+          >
+            <Icon
+              name={state.isDetailedRead ? 'check-circle' : 'checkbox-blank-outline'}
+              size={20}
+              color={state.isDetailedRead ? '#fff' : '#2f4f9d'}
+            />
+            <Text
+              style={[
+                styles.checkboxLabel,
+                state.isDetailedRead && { color: '#fff' },
+              ]}
+            >
+              Chi tiết
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Hiển thị kết quả */}
-        {meterData && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📊 Kết quả đọc dữ liệu</Text>
+        {/* Thông tin kết quả đọc */}
+        {state.meterData && (
+          <>
+            <Text style={styles.sectionTitle}>📊 Kết quả đọc</Text>
+            <InfoRow label="🔧 Serial" value={state.meterData.serial} />
+            <InfoRow label="⏰ Thời gian" value={state.meterData.currentTime} />
+            <InfoRow label="🔢 Chỉ số xuôi" value={state.meterData.impData} />
+            <InfoRow label="📤 Chỉ số ngược" value={state.meterData.expData} />
+            <InfoRow label="🔋 Pin" value={state.meterData.batteryLevel} />
+            <InfoRow label="⏱ Chu kỳ chốt" value={state.meterData.latchPeriod} />
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>🔧 Serial</Text>
-              <Text style={styles.infoValue}>{meterData.serial}</Text>
-            </View>
+            <Text style={styles.sectionTitle}>📝 Sự kiện</Text>
+            {Array.isArray(state.meterData.event) && state.meterData.event.length > 0 ? (
+              state.meterData.event.map((e: string, i: number) => (
+                <Text key={i} style={styles.eventItem}>
+                  • {e}
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.eventItem}>Không có sự kiện</Text>
+            )}
+          </>
+        )}
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>⏰ Thời gian</Text>
-              <Text style={styles.infoValue}>{meterData.timestamp}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>🔢 Chỉ số hiện tại</Text>
-              <Text style={styles.infoValue}>{meterData.currentIndex}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>🔋 Pin</Text>
-              <Text style={styles.infoValue}>{meterData.battery}</Text>
-            </View>
-
-            <Text style={styles.sectionTitle}>📝 Các sự kiện</Text>
-            {meterData.events.map((e: string, i: number) => (
-              <Text key={i} style={styles.eventItem}>
-                • {e}
-              </Text>
-            ))}
-
+        {/* Danh sách bản ghi */}
+        {(state.meterData?.dataRecords?.length ?? 0) > 0 && (
+          <>
             <Text style={styles.sectionTitle}>📂 90 bản ghi gần nhất</Text>
             <FlatList
-              data={meterData.last90Records}
-              keyExtractor={(item) => item.id}
-              renderItem={renderRecord}
-              style={styles.recordList}
-              showsVerticalScrollIndicator={false}
+              data={state.meterData?.dataRecords ?? []}
+              keyExtractor={(_, idx) => idx.toString()}
+              renderItem={({ item, index }) => (
+                <View
+                  style={[
+                    styles.recordItem,
+                    index % 2 === 0 && { backgroundColor: '#f7f9fc' },
+                  ]}
+                >
+                  <Text style={styles.recordIndex}>{index + 1}</Text>
+                  <Text style={styles.recordDate}>{item.timestamp}</Text>
+                  <Text style={styles.recordValue}>{item.value}</Text>
+                </View>
+              )}
+              scrollEnabled={false}
             />
-          </View>
+          </>
         )}
       </ScrollView>
 
       {/* Button đọc dữ liệu */}
       <View style={styles.btnBottom}>
-        <Button style={styles.button} label="Đọc dữ liệu" onPress={onReadData} />
+        <Button
+          style={styles.button}
+          label={state.isDetailedRead ? '📖 Đọc chi tiết' : '📡 Đọc dữ liệu'}
+          onPress={() => onReadData()}
+        />
       </View>
     </>
   );
 };
 
+const InfoRow = ({ label, value }: { label: string; value: any }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginHorizontal: 15,
-    paddingTop: 20,
+    backgroundColor: '#f5f7fb',
+    paddingHorizontal: 15,
+    paddingTop: 15,
   },
-  group: {
-    marginBottom: 20,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#dfe6f2',
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  label: {
-    fontSize: normalize(15),
-    marginBottom: 8,
-    color: Colors.text,
-    fontWeight: '600',
+  serialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   textInput: {
-    width: '100%',
+    flex: 1,
     height: CommonHeight,
     fontSize: CommonFontSize,
-    borderColor: '#6e83e4',
+    borderColor: '#c3cde6',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 12,
-    color: Colors.text,
-    backgroundColor: '#fafbff',
+    backgroundColor: '#fff',
+    marginRight: 10,
   },
-  card: {
-    marginBottom: 20,
-    padding: 18,
-    borderRadius: 16,
-    backgroundColor: '#f9fbff',
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#d0defc',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 3,
+    borderColor: '#2f4f9d',
+    backgroundColor: '#fff',
   },
-  cardTitle: {
-    fontSize: normalize(18),
-    fontWeight: '700',
-    marginBottom: 14,
+  checkboxContainerActive: {
+    backgroundColor: '#2f4f9d',
+  },
+  checkboxLabel: {
+    marginLeft: 4,
+    fontSize: normalize(13),
     color: '#2f4f9d',
-    textAlign: 'center',
+    fontWeight: '600',
+  },
+  sectionTitle: {
+    fontSize: normalize(15),
+    fontWeight: '700',
+    marginVertical: 8,
+    color: '#2f4f9d',
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 0.5,
+    borderColor: '#e0e6f5',
   },
   infoLabel: {
     fontSize: normalize(14),
-    fontWeight: '500',
     color: '#444',
   },
   infoValue: {
@@ -180,38 +205,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
   },
-  sectionTitle: {
-    fontSize: normalize(15),
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-    color: '#2f4f9d',
-  },
   eventItem: {
-    fontSize: normalize(14),
-    marginBottom: 4,
-    marginLeft: 8,
+    fontSize: normalize(13),
+    marginBottom: 2,
+    marginLeft: 4,
     color: '#333',
-  },
-  recordList: {
-    maxHeight: 250,
-    marginTop: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e6f5',
-    overflow: 'hidden',
   },
   recordItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 0.5,
-    borderColor: '#e5e5e5',
+    borderColor: '#e0e6f5',
+  },
+  recordIndex: {
+    width: 28,
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: normalize(13),
+    color: '#2f4f9d',
   },
   recordDate: {
+    flex: 1,
     fontSize: normalize(13),
     color: '#555',
+    marginHorizontal: 6,
   },
   recordValue: {
     fontSize: normalize(13),
@@ -219,13 +238,14 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   btnBottom: {
-    marginVertical: 20,
+    marginVertical: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   button: {
-    width: '70%',
+    width: '75%',
     height: 50,
     maxWidth: 350,
+    borderRadius: 10,
   },
 });

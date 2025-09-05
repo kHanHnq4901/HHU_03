@@ -19,30 +19,25 @@ import {
 } from '@track-asia/trackasia-react-native';
 import * as turf from '@turf/turf';
 import { LoadingOverlay } from '../../component/loading ';
-import { requestLocationPermission, startWatchingPosition, stopWatchingPosition } from './handleButton';
+import { requestLocationPermission, startWatchingPosition } from './handleButton';
 
 export const AutomaticReadScreen = () => {
   GetHookProps();
+
   const [selectedMeter, setSelectedMeter] = React.useState<any | null>(null);
 
   useEffect(() => {
     requestLocationPermission();
-    return () => {
-      stopWatchingPosition();
-    };
   }, []);
-  if (!hookProps.state.currentLocation) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={{ marginTop: 10 }}>Đang lấy vị trí...</Text>
-      </View>
-    );
-  }
 
-  // Nếu có vị trí -> render map và các thành phần khác
-  const mapElement = useMemo(
-    () => (
+  const currentLocation = hookProps.state.currentLocation;
+  const listMeter = hookProps.state.listMeter;
+
+  // ✅ Sử dụng useMemo để tránh re-render mapElement không cần thiết
+  const mapElement = useMemo(() => {
+    if (!currentLocation) return null; // trả về null nếu chưa có vị trí
+
+    return (
       <MapView
         style={styles.map}
         mapStyle="https://maps.track-asia.com/styles/v2/streets.json?key=f4a6c08959b47211756357354b1b73ac74"
@@ -53,17 +48,19 @@ export const AutomaticReadScreen = () => {
         pitchEnabled
         attributionEnabled
       >
-        <Camera zoomLevel={15} centerCoordinate={hookProps.state.currentLocation} />
+        <Camera zoomLevel={Number(store.state.appSetting.setting.zoomLevel)} centerCoordinate={currentLocation} />
 
+        {/* Chấm vị trí hiện tại */}
         <PointAnnotation
           key="current-location"
           id="current-location"
-          coordinate={hookProps.state.currentLocation}
+          coordinate={currentLocation}
         >
           <View style={styles.currentLocationDot} />
         </PointAnnotation>
 
-        {hookProps.state.listMeter.map((meter, index) => {
+        {/* Vẽ chấm đồng hồ */}
+        {listMeter?.map((meter, index) => {
           if (!meter.COORDINATE) return null;
 
           const [latStr, lonStr] = meter.COORDINATE.split(',').map((v) => v.trim());
@@ -89,7 +86,7 @@ export const AutomaticReadScreen = () => {
         <ShapeSource
           id="circle"
           shape={turf.circle(
-            hookProps.state.currentLocation as [number, number],
+            currentLocation as [number, number],
             Number(store.state.appSetting.setting.distance) / 1000,
             { steps: 64, units: 'kilometers' }
           )}
@@ -103,9 +100,17 @@ export const AutomaticReadScreen = () => {
           />
         </ShapeSource>
       </MapView>
-    ),
-    [hookProps.state.listMeter, hookProps.state.currentLocation]
-  );
+    );
+  }, [listMeter]);
+
+  if (!currentLocation) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text style={{ marginTop: 10 }}>Đang lấy vị trí...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -115,7 +120,7 @@ export const AutomaticReadScreen = () => {
       />
       {mapElement}
 
-      {/* Popup chi tiết khi chọn meter */}
+      {/* Popup chi tiết */}
       {selectedMeter && (
         <View style={styles.fixedPopup}>
           <Text style={styles.popupTitle}>Thông tin đồng hồ nước</Text>

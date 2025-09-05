@@ -18,19 +18,6 @@ export const stringToBuffer = (text: string): Buffer => {
   return Buffer.from(text, "utf-8");
 };
 
-const hexStringToBytes = (hex: string): number[] => {
-  return hex
-    .replace(/\s+/g, "")       
-    .match(/.{1,2}/g)      
-    ?.map(b => parseInt(b, 16)) || [];
-};
-export const intToBytes = (value: number): number[] => {
-  const bytes = new Uint8Array(4); // Int32 = 4 byte
-  const dataView = new DataView(bytes.buffer);
-  dataView.setInt32(0, value, false); // false = big-endian, true = little-endian
-  return Array.from(bytes);
-};
-
 const buildPacket = (
   commandType: number,
   payload: number[],
@@ -57,11 +44,10 @@ export const buildGetParamPacket = (
   meterSerial: string,
   payload: LoraCommandCode
 ): number[] => {
-  const meterSerialNum = parseInt(meterSerial, 10);
   return buildPacket(
     CommandType.LORA_GET_PARAM,
     [payload as number],
-    intToBytes(meterSerialNum)
+    stringToBytes(meterSerial)
   );
 };
 
@@ -69,7 +55,7 @@ export const buildSetParamPacket = (
   meterSerial: string,
   params: string
 ): number[] => {
-  const paramBytes = hexStringToBytes(params);
+  const paramBytes = stringToBytes(params);
 
   const payload = [
     LoraCommandCode.SETTING,
@@ -77,23 +63,32 @@ export const buildSetParamPacket = (
     paramBytes.length, 
     ...paramBytes,
   ];
-  const meterSerialNum = parseInt(meterSerial, 10);
   return buildPacket(
     CommandType.LORA_SET_PARAM,
     payload,
-    intToBytes(meterSerialNum)
+    stringToBytes(meterSerial)
   );
 };
 
-export const buildQueryDataPacket = (meterSerial: string): number[] => {
-  const payload = [LoraCommandCode.QUERY_DATA,0x01];
-  const meterSerialNum = parseInt(meterSerial, 10);
+export const buildQueryDataPacket = (
+  meterSerial: string,
+  isDetailedRead: boolean
+): number[] => {
+  // ✅ Thêm 1 byte biểu diễn trạng thái isDetailedRead
+  const detailedReadByte = isDetailedRead ?   LoraCommandCode.LORA_CMD_QUERY_DATA_DETAIL : LoraCommandCode.LORA_CMD_QUERY_DATA;
+
+  const payload = [
+    LoraCommandCode.QUERY_DATA,
+    detailedReadByte, // ✅ byte mới
+  ];
+
   return buildPacket(
     CommandType.LORA_QUERY_DATA,
     payload,
-    intToBytes(meterSerialNum)
+    stringToBytes(meterSerial)
   );
 };
+
 
 export const buildLoraWakeUpPacket = (meterSerial: string): number[] => {
   const wakeupString = "WM08WakeUpNow";
@@ -105,10 +100,9 @@ export const buildLoraWakeUpPacket = (meterSerial: string): number[] => {
     wakeupBytes.length,
     ...wakeupBytes,
   ];
-  const meterSerialNum = parseInt(meterSerial, 10);
   return buildPacket(
     CommandType.LORA_WAKEUP,
     payload,
-    intToBytes(meterSerialNum)
+    stringToBytes(meterSerial)
   );
 };

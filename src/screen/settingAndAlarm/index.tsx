@@ -52,6 +52,26 @@ export const SystemSettingScreen = () => {
               }}
             />
           </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>zoom bản đồ:</Text>
+            <TextInput
+              keyboardType="numeric"
+              value={store.state.appSetting.setting.zoomLevel}
+              style={styles.textInput}
+              onChangeText={text => {
+                store.setState(prev => ({
+                  ...prev,
+                  appSetting: {
+                    ...prev.appSetting,
+                    setting: {
+                      ...prev.appSetting.setting,
+                      zoomLevel: text, // cập nhật field distance
+                    },
+                  },
+                }));
+              }}
+            />
+          </View>
         </View>
 
         {/* Ngưỡng cảnh báo */}

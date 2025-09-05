@@ -1,121 +1,55 @@
-import React, { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Alert } from "react-native";
-export const hookProps = {} as PropsHook;
-type PropsState = {
+import { PropsLineModel, PropsMeterDataModel, PropsMeterModel, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from "../../database/entity";
+import { checkTabelDBIfExist, getDBConnection } from "../../database/repository";
+import { PropsStore, storeContext } from "../../store";
+
+export const hookProps = {} as HookProps;
+export type HookProps = {
+  state: HookState;
+  setState: React.Dispatch<React.SetStateAction<HookState>>;
+};
+export type PropDataMeter = {
   serial: string;
-  cycle: string;
-  timeRange1Start: Date;
-  timeRange1End: Date;
-  timeRange2Start: Date;
-  timeRange2End: Date;
-  pickerMode: null | string;
-  daysPerMonth: number[];
-  openDays: boolean;
-  dayItems: { label: string; value: number }[];
-  readCycle: boolean;
-  readTimeRange : boolean
-  readDaysPerMonth: boolean;
+  currentTime: string;
+  impData: number;        
+  expData: number;        
+  event: string;
+  batteryLevel: string;  
+  latchPeriod: string;
+  dataRecords: {
+    timestamp: string;  // thời gian (ISO hoặc HH:mm)
+    value: number;      // chỉ số tương ứng
+  }[];
 };
 
-type PropsHook = {
-  state: PropsState;
-  setState: React.Dispatch<React.SetStateAction<PropsState>>;
-  formatHour: (date: Date) => string;
-  onChangeTime: (mode: string, selectedDate?: Date) => void;
+export type HookState = {
+  serial: string;
+  isDetailedRead: boolean;
+  meterData: PropDataMeter | null;  // có thể null
+  isLoading: boolean;
+  isAutoReading: boolean;
+  textLoading: string;
 };
 
-// ---- Custom hook ----
-export const useHookProps = (): PropsHook => {
-  const [state, setState] = useState<PropsState>({
-    serial: "",
-    cycle: "2",
+export let store = {} as PropsStore;
 
-    timeRange1Start: new Date(),
-    timeRange1End: new Date(),
-    timeRange2Start: new Date(),
-    timeRange2End: new Date(),
-
-    pickerMode: null,
-
-    daysPerMonth: [],
-    openDays: false,
-    dayItems: Array.from({ length: 28 }, (_, i) => ({
-      label: `${i + 1}`,
-      value: i + 1,
-    })),
-
-    readCycle: true,
-    readTimeRange: true,
-    readDaysPerMonth: true,
+export const GetHookProps = (): HookProps => {
+  const [state, setState] = useState<HookState>({
+    serial : "1234567890" , 
+    isDetailedRead : false,
+    meterData: null,
+    isLoading: false,
+    isAutoReading : false,
+    textLoading: '',
   });
 
-  const formatHour = (date: Date) =>
-    date.getHours().toString().padStart(2, "0") + " h";
+  store = useContext(storeContext) as PropsStore;
 
-  const onChangeTime = (mode: string, selectedDate?: Date) => {
-    if (!selectedDate) {
-      setState(prev => ({ ...prev, pickerMode: null }));
-      return;
-    }
-
-    const date = new Date(selectedDate);
-    date.setMinutes(0);
-    date.setSeconds(0);
-
-    // Kiểm tra phạm vi sáng
-    if (mode === "t1start" || mode === "t1end") {
-      if (date.getHours() < 0 || date.getHours() > 12) {
-        Alert.alert("Lỗi", "Khoảng giờ sáng chỉ được từ 0h đến 12h");
-        setState(prev => ({ ...prev, pickerMode: null }));
-        return;
-      }
-    }
-
-    // Kiểm tra phạm vi chiều
-    if (mode === "t2start" || mode === "t2end") {
-      if (date.getHours() < 12 || date.getHours() > 23) {
-        Alert.alert("Lỗi", "Khoảng giờ chiều chỉ được từ 12h đến 24h");
-        setState(prev => ({ ...prev, pickerMode: null }));
-        return;
-      }
-    }
-
-    // Kiểm tra giờ bắt đầu < giờ kết thúc
-    if (mode === "t1start" && date >= state.timeRange1End) {
-      Alert.alert("Lỗi", "Giờ bắt đầu phải nhỏ hơn giờ kết thúc (sáng)");
-      setState(prev => ({ ...prev, pickerMode: null }));
-      return;
-    }
-    if (mode === "t1end" && date <= state.timeRange1Start) {
-      Alert.alert("Lỗi", "Giờ kết thúc phải lớn hơn giờ bắt đầu (sáng)");
-      setState(prev => ({ ...prev, pickerMode: null }));
-      return;
-    }
-    if (mode === "t2start" && date >= state.timeRange2End) {
-      Alert.alert("Lỗi", "Giờ bắt đầu phải nhỏ hơn giờ kết thúc (chiều)");
-      setState(prev => ({ ...prev, pickerMode: null }));
-      return;
-    }
-    if (mode === "t2end" && date <= state.timeRange2Start) {
-      Alert.alert("Lỗi", "Giờ kết thúc phải lớn hơn giờ bắt đầu (chiều)");
-      setState(prev => ({ ...prev, pickerMode: null }));
-      return;
-    }
-
-    // Nếu hợp lệ thì update state
-    setState(prev => {
-      const newState = { ...prev };
-      if (mode === "t1start") newState.timeRange1Start = date;
-      if (mode === "t1end") newState.timeRange1End = date;
-      if (mode === "t2start") newState.timeRange2Start = date;
-      if (mode === "t2end") newState.timeRange2End = date;
-      newState.pickerMode = null;
-      return newState;
-    });
-  };
+  // Gắn global cho hookProps
   hookProps.state = state;
   hookProps.setState = setState;
-  hookProps.formatHour = formatHour
-  hookProps.onChangeTime = onChangeTime
-  return hookProps ;
+
+  return hookProps;
 };
+

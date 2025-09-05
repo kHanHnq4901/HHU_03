@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 import { bleManagerEmitter } from '../../screen/ble/controller';
 import BleManager from 'react-native-ble-manager';
 import { responeSetting } from '../../screen/configMeter/controller';
+import { responeData } from '../../screen/readDataMeter/handleButton';
 const KEY_STORAGE = 'BLE_INFO';
 const TAG = 'Ble Func:';
 
@@ -233,10 +234,7 @@ export const connectLatestBLE = async (store: PropsStore) => {
   }
 };
 
-// Giả sử ta có các hàm xử lý cho từng type
-function handleType1(payload: number[]) {
-  console.log("🔹 Xử lý Type 1:", payload);
-}
+
 
 
 function handleType2(payload: number[]) {
@@ -245,16 +243,28 @@ function handleType2(payload: number[]) {
 
 export const handleUpdateValueForCharacteristic = (data: { value: number[] }) => {
   console.log('data update for characteristic:', data.value);
-  const receiveData = data.value;
+  const buf = Buffer.from(data.value);
 
-  const buf = Buffer.from(receiveData);
-
-  if (buf.length >= 8 && buf[0] === 0x02 && buf[1] === 0x08) {
+  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x05) { // kiểm tra tối thiểu
     console.log("✅ Header hợp lệ");
-    const payload = Array.from(buf.slice(8));
-    switch (buf[2]){
+
+    const moduleType = buf[1];
+    const commandType = buf[2];
+    const lenPayload = buf[3];
+
+    const meterSerialBytes = buf.slice(4, 14); // 10 byte meter serial
+    const meterSerial = meterSerialBytes.toString('ascii'); // nếu là string ASCII
+
+    const payloadStart = 14;
+    const payloadEnd = payloadStart + lenPayload;
+    const payload = Array.from(buf.slice(payloadStart, payloadEnd)); // chỉ lấy payload
+
+    console.log("📡 Meter Serial:", meterSerial);
+    console.log("📦 Payload:", payload);
+
+    switch (commandType) {
       case 0x01:
-        handleType1(payload);
+        responeData(payload, meterSerial);
         break;
       case 0x03:
         responeSetting(payload);
@@ -263,16 +273,17 @@ export const handleUpdateValueForCharacteristic = (data: { value: number[] }) =>
         handleType2(payload);
         break;
       default:
-        console.log("⚠️ Unknown type:", buf[3], payload);
+        console.log("⚠️ Unknown type:", commandType, payload);
     }
 
     HhuObj.flag_rec = true;
     HhuObj.identityFrame.bActive = false;
   } else {
-    console.log("❌ Header không hợp lệ hoặc dữ liệu quá ngắn");
+    console.log("❌ Header không hợp lệ hoặc dữ liệu quá ngắn", buf[2]);
     HhuObj.identityFrame.bActive = false;
   }
 };
+
 
 
 

@@ -18,7 +18,6 @@ export const ConfigMeterScreen = () => {
   useHookProps();
   return (
     <View style={styles.container}>
-      {/* Serial */}
       <View style={styles.section}>
         <View style={styles.labelRow}>
           <Text style={styles.label}>Serial</Text>
@@ -46,76 +45,83 @@ export const ConfigMeterScreen = () => {
             }
           />
           <Text style={styles.label}>Chu kỳ chốt dữ liệu</Text>
-        </View>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={hookProps.state.cycle}
-            onValueChange={(itemValue) =>
-              hookProps.setState((prev) => ({ ...prev, cycle: itemValue }))
-            }
-          >
-            {[2, 3, 4, 6, 8, 12, 24].map((v) => (
-              <Picker.Item key={v} label={`${v} tiếng`} value={`${v}`} />
-            ))}
-          </Picker>
-        </View>
+          </View>
+            {hookProps.state.cycle && (
+              <View style={styles.inputLarge}>
+                <Picker
+                  selectedValue={Number(hookProps.state.cycle) / 60} // hiển thị theo giờ
+                  onValueChange={(itemValue) =>
+                    hookProps.setState((prev) => ({
+                      ...prev,
+                      cycle: String(itemValue * 60), // convert giờ -> phút khi lưu
+                    }))
+                  }
+                >
+                  {[2, 3, 4, 6, 8, 12, 24].map((v) => (
+                    <Picker.Item key={v} label={`${v} giờ`} value={v} />
+                  ))}
+                </Picker>
+              </View>
+            )}
+            </View>
+
+
+    <View style={styles.section}> 
+      <View style={styles.labelRow}>
+        <CheckBox
+          value={hookProps.state.readTimeRange}
+          onValueChange={(val) =>
+            hookProps.setState((prev) => ({ ...prev, readTimeRange: val }))
+          }
+        />
+        <Text style={styles.label}>Khoảng giờ (Sáng & Chiều)</Text>
       </View>
+      {hookProps.state.timeRange1Start && hookProps.state.timeRange1End && hookProps.state.timeRange2Start && hookProps.state.timeRange2End && (
+        <>
+          <View style={styles.timeRow}>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() =>
+                hookProps.setState((prev) => ({ ...prev, pickerMode: 't1start' }))
+              }
+            >
+              <Text>{hookProps.formatHour(hookProps.state.timeRange1Start)}</Text>
+            </TouchableOpacity>
+            <Text style={{ marginHorizontal: 8 }}>→</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() =>
+                hookProps.setState((prev) => ({ ...prev, pickerMode: 't1end' }))
+              }
+            >
+              <Text>{hookProps.formatHour(hookProps.state.timeRange1End)}</Text>
+            </TouchableOpacity>
+          </View>
 
-{/* Khoảng giờ (sáng + chiều) */}
-<View style={styles.section}>
-  <View style={styles.labelRow}>
-    <CheckBox
-      value={hookProps.state.readTimeRange} // gộp thành 1 state duy nhất
-      onValueChange={(val) =>
-        hookProps.setState((prev) => ({ ...prev, readTimeRange: val }))
-      }
-    />
-    <Text style={styles.label}>Khoảng giờ (Sáng & Chiều)</Text>
-  </View>
+          <View style={styles.timeRow}>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() =>
+                hookProps.setState((prev) => ({ ...prev, pickerMode: 't2start' }))
+              }
+            >
+              <Text>{hookProps.formatHour(hookProps.state.timeRange2Start)}</Text>
+            </TouchableOpacity>
+            <Text style={{ marginHorizontal: 8 }}>→</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() =>
+                hookProps.setState((prev) => ({ ...prev, pickerMode: 't2end' }))
+              }
+            >
+              <Text>{hookProps.formatHour(hookProps.state.timeRange2End)}</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
 
-  {/* Sáng */}
-  <View style={styles.timeRow}>
-    <TouchableOpacity
-      style={styles.input}
-      onPress={() =>
-        hookProps.setState((prev) => ({ ...prev, pickerMode: 't1start' }))
-      }
-    >
-      <Text>{hookProps.formatHour(hookProps.state.timeRange1Start)}</Text>
-    </TouchableOpacity>
-    <Text style={{ marginHorizontal: 8 }}>→</Text>
-    <TouchableOpacity
-      style={styles.input}
-      onPress={() =>
-        hookProps.setState((prev) => ({ ...prev, pickerMode: 't1end' }))
-      }
-    >
-      <Text>{hookProps.formatHour(hookProps.state.timeRange1End)}</Text>
-    </TouchableOpacity>
-  </View>
-
-  {/* Chiều */}
-  <View style={styles.timeRow}>
-    <TouchableOpacity
-      style={styles.input}
-      onPress={() =>
-        hookProps.setState((prev) => ({ ...prev, pickerMode: 't2start' }))
-      }
-    >
-      <Text>{hookProps.formatHour(hookProps.state.timeRange2Start)}</Text>
-    </TouchableOpacity>
-    <Text style={{ marginHorizontal: 8 }}>→</Text>
-    <TouchableOpacity
-      style={styles.input}
-      onPress={() =>
-        hookProps.setState((prev) => ({ ...prev, pickerMode: 't2end' }))
-      }
-    >
-      <Text>{hookProps.formatHour(hookProps.state.timeRange2End)}</Text>
-    </TouchableOpacity>
-  </View>
-</View>
-
+    </View>
+          
 
       {/* Ngày/tháng */}
       <View style={styles.section}>
@@ -128,6 +134,7 @@ export const ConfigMeterScreen = () => {
           />
           <Text style={styles.label}>Số ngày/tháng (Tối đa 7)</Text>
         </View>
+        {hookProps.state.daysPerMonth.length > 0 && (
         <DropDownPicker
           open={hookProps.state.openDays}
           value={hookProps.state.daysPerMonth}
@@ -153,9 +160,8 @@ export const ConfigMeterScreen = () => {
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdown}
         />
+      )}
       </View>
-
-      {/* Nút hành động */}
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: '#1877F2' }]}
@@ -199,13 +205,12 @@ export const ConfigMeterScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 12 },
   label: { fontSize: 14, fontWeight: 'bold', marginLeft: 4 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, },
   section: { marginBottom: 12 },
   inputLarge: {
     height: 50,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#888',
+    borderWidth: 1,
     paddingHorizontal: 16,
     fontSize: 18,
     backgroundColor: '#fff',
@@ -215,14 +220,15 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
     paddingHorizontal: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: '#fff',
+    color: '#000',
   },
-  pickerContainer: { borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+
   timeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  dropdown: { borderColor: '#ccc' },
+  dropdown: { borderWidth: 1, },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

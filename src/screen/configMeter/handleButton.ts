@@ -13,7 +13,16 @@ export const readConfig = async () => {
       Alert.alert('Vui lòng điền serial');
       return;
     }
-
+ 
+      hookProps.setState((prev) => ({
+        ...prev,
+        timeRange1Start: null,
+        timeRange1End: null,
+        timeRange2Start: null,
+        timeRange2End: null,
+        cycle: "",
+        daysPerMonth: [],
+      }));
     const { readCycle, readTimeRange, readDaysPerMonth } = hookProps.state;
 
     // Gom các flag

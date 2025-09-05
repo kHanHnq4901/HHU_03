@@ -2,7 +2,8 @@ import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
 import { Buffer } from 'buffer'; // cần import Buffer
-import { handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
+import { connectLatestBLE, handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
+import { onBlePress } from '../screen/overview/handleButton';
 const TAG = 'Ble.ts:';
 
 let service: string ;
@@ -115,9 +116,24 @@ export const send = async (idPeripheral: string, data: number[]) => {
     const isConnected = await BleManager.isPeripheralConnected(idPeripheral, []);
 
     if (!isConnected) {
-      Alert.alert('Chưa kết nối với thiết bị');
-      return; // hoặc tự reconnect rồi mới ghi
+      Alert.alert(
+        'Thông báo',
+        'Chưa kết nối với thiết bị,Bạn có muốn kết nối lại với thiết bị đã dùng trước đó không?',
+        [
+          {
+            text: 'Hủy',
+            style: 'cancel',
+          },
+          {
+            text: 'Kết nối lại',
+            onPress: () => onBlePress(), // Gọi hàm reconnect
+          },
+        ],
+        { cancelable: true }
+      );
+      return;
     }
+    
 
     // 🟢 Nếu đã kết nối thì ghi
     await BleManager.write(idPeripheral, service, characteristic, data);

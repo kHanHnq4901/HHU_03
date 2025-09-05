@@ -1,7 +1,3 @@
-import { dataDBMatchSeriVersion } from '../../database/service/matchSeriVersionService';
-import { Colors } from '../../theme';
-import { GetObjMaCongToFromStorage } from '../storage/maCongTo';
-
 
 export enum ERROR_TABLE {
   E_SUCCESS = 0,
