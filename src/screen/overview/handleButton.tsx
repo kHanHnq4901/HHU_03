@@ -4,10 +4,11 @@ import { ObjSend, readVersion } from '../../service/hhu/hhuFunc';
 import { requestBluetoothPermissions, requestPermissionScan } from '../../service/permission';
 import BleManager from 'react-native-ble-manager';
 import * as Ble from '../../util/ble';
-import { showAlert, sleep } from '../../util';
+import { showAlert, showToast, sleep } from '../../util';
 import { hookProps, requestGps, setStatus, store } from './controller';
 import { Alert, Platform } from 'react-native';
 import { navigationRef } from '../../navigation/StackRootNavigator';
+import { PropsAppSetting, saveValueAppSettingToNvm } from '../../service/storage';
 
 const TAG = 'handleBtn Ble:';
 
@@ -266,3 +267,7 @@ export function onBleLongPress() {
   }
 }
 
+export async function onSavePress() {
+  await saveValueAppSettingToNvm(store?.state.appSetting as PropsAppSetting);
+  showToast('Đã lưu');
+}

@@ -1,6 +1,6 @@
 import Geolocation from '@react-native-community/geolocation';
-import React, { useContext, useEffect, useState } from 'react';
-import { EmitterSubscription, EventSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Alert, EmitterSubscription, EventSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import * as permission from 'react-native-permissions';
 import {
   requestBluetoothPermissions,
@@ -22,6 +22,9 @@ import {
   initModuleBle,
 } from '../../service/hhu/bleHhuFunc';
 import { ObjSend } from '../../service/hhu/hhuFunc';
+import { PropsLineModel, PropsMeterDataModel, PropsMeterModel, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from '../../database/entity';
+import { checkTabelDBIfExist, getDBConnection } from '../../database/repository';
+import { useFocusEffect } from '@react-navigation/native';
   let hhuDiscoverPeripheral: EventSubscription | null= null;
   let hhuDisconnectListener: EventSubscription | null = null;
   let hhuReceiveDataListener: EventSubscription | null = null;
@@ -43,6 +46,8 @@ type PropsBLE = {
 export type HookState = {
   status: string;
   ble: PropsBLE;
+  listMeter: PropsMeterModel[];
+  statusCount: { [status: number]: number }; 
 };
 
 export type HookProps = {
@@ -99,12 +104,49 @@ export const GetHookProps = (): HookProps => {
       listBondedDevice: [],
       listNewDevice: [],
     },
+    listMeter: [],
+    statusCount: {},
   });
+
+  // Hàm load dữ liệu tách riêng để tái sử dụng
+  const fetchData = useCallback(async () => {
+    try {
+      const db = await getDBConnection();
+      if (!db) return;
+
+      await checkTabelDBIfExist();
+      const meterResults = await db.executeSql(
+        'SELECT * FROM ' + TABLE_NAME_INFO_METER
+      );
+      const listMeter = meterResults[0].rows.raw() as PropsMeterModel[];
+      const statusCount: { [status: number]: number } = {};
+
+      listMeter.forEach((item) => {
+        const status = (item as any).STATUS ?? 0;
+        statusCount[status] = (statusCount[status] || 0) + 1;
+      });
+
+      setState((prev) => ({
+        ...prev,
+        listMeter,
+        statusCount,
+      }));
+    } catch (error) {
+      console.error('❌ Lỗi khi load dữ liệu:', error);
+      Alert.alert('Lỗi', 'Không thể tải dữ liệu từ database.');
+    }
+  }, []);
+
+  // Load khi màn hình focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
+
   hookProps.state = state;
   hookProps.setState = setState;
-
   store = useContext(storeContext) as PropsStore;
-
 
   return hookProps;
 };
@@ -243,11 +285,11 @@ export const onInit = async (navigation: StackNavigationProp<StackRootParamsList
         );
       }
 
-      if (!hhuReceiveDataListener) {
-        hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
-          hhuHandleReceiveData
-        );
-      }
+      // if (!hhuReceiveDataListener) {
+      //   hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
+      //     hhuHandleReceiveData
+      //   );
+      // }
 
       if (!hhuDisconnectListener) {
         hhuDisconnectListener = BleManager.onDisconnectPeripheral(

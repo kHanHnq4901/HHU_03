@@ -29,6 +29,7 @@ export const endPoints = {
   getMeterAccount : '/api/GetMeterAccount',
   getLineList :'/api/GetLineList',
   getMeterListByLine : '/api/GetMeterListByLine',
+  saveActiveTotal : 'api/SaveActiveTotal',
 };
 
 function getUrl(endPoint: string): string {
@@ -52,6 +53,13 @@ function getUrl(endPoint: string): string {
 type PropsLogin = {
   userName: string;
   password: string;
+};
+type PropsSaveActiveTotal= {
+   
+ 	meterNo: string;
+  dataTime: string;
+  activeTotal : string;
+  negactiveTotal : string;
 };
 type PropsGetMeterAccount= {
   userID: string;
@@ -109,6 +117,56 @@ export const login = async (
       const strErr = err.message as string;
       if (strErr.includes('status code 400')) {
         ret.strMessage = 'Thông tin đăng nhập không chính xác (400)';
+      } else {
+        ret.strMessage = err.message;
+      }
+    } else {
+      ret.strMessage = 'Đã xảy ra lỗi khi kết nối tới server';
+    }
+  }
+
+  return ret;
+};
+export const saveActiveTotal = async (
+  props: PropsSaveActiveTotal,
+): Promise<PropsCommonResponse> => {
+  const ret: PropsCommonResponse = {
+    bSucceed: false,
+    obj: undefined,
+    strMessage: '',
+  };
+
+  console.log("✅ Đã vào hàm login");
+
+  try {
+    const url = getUrl(endPoints.saveActiveTotal); 
+    console.log('🌐 URL:', url);
+
+    const params = {
+      MeterNo: props.meterNo,
+      DataTime: props.dataTime,
+      ActiveTotal : props.activeTotal,
+      NegactiveTotal : props.negactiveTotal,
+      Token : store.state.infoUser.moreInfoUser.token
+    };
+
+    const { data } = await axios.get(url, { params });
+    console.log('📥 Response data:', data);
+
+    // Kiểm tra mã phản hồi từ server
+    if (data.CODE === "1") {
+      ret.bSucceed = true;
+      ret.obj = data; // Hoặc ép kiểu nếu cần: data as PropsLoginServerDLHNReturn
+      ret.strMessage = "Đẩy dữ liệu thành công";
+    } else {
+      ret.strMessage = data.MESSAGE || 'Đẩy dữ liệu thất bại';
+    }
+  } catch (err: any) {
+    console.log('❌ Error:', err);
+    if (err.message) {
+      const strErr = err.message as string;
+      if (strErr.includes('status code 400')) {
+        ret.strMessage = 'Thông tin dữ liệu không chính xác (400)';
       } else {
         ret.strMessage = err.message;
       }
@@ -216,13 +274,14 @@ type SaveMode = "replace" | "append";
 export const SaveMeterDataToDB = async (
   item: { LINE_ID: string; LINE_NAME: string; ADDRESS: string; CODE: string; countMeter: number },
   options: { mode: "replace" | "append" }
-) => {
+): Promise<boolean> => {
   try {
     const db = await getDBConnection();
-    if (!db) return;
+    if (!db) return false;
 
     await checkTabelDBIfExist();
 
+    // === REPLACE MODE ===
     if (options.mode === "replace") {
       await db.executeSql(
         `INSERT INTO ${TABLE_NAME_INFO_LINE} (LINE_ID, LINE_NAME, ADDRESS, CODE) 
@@ -235,8 +294,8 @@ export const SaveMeterDataToDB = async (
       const meterList: PropsMeterModel[] = await handleGetMeterByLineFromServer(item.LINE_ID);
       if (meterList && meterList.length > 0) {
         for (const meter of meterList) {
-          const statusValue = meter.STATUS ?? "0";
-          const lineIdToInsert = meter.LINE_ID ?? item.LINE_ID; // ✅ fallback từ item.LINE_ID
+          const statusValue = meter.STATUS ?? "0"; // ✅ STATUS là string
+          const lineIdToInsert = meter.LINE_ID ?? item.LINE_ID;
 
           await db.executeSql(
             `INSERT INTO ${TABLE_NAME_INFO_METER} 
@@ -244,20 +303,20 @@ export const SaveMeterDataToDB = async (
               ADDRESS, PHONE, EMAIL, CREATED, LINE_NAME, COORDINATE, LINE_ID, METER_MODEL_ID, STATUS) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              meter.METER_NO,
-              meter.METER_NAME,
-              meter.METER_MODEL_DESC,
-              meter.MODULE_NO,
-              meter.CUSTOMER_CODE,
-              meter.CUSTOMER_NAME,
-              meter.ADDRESS,
-              meter.PHONE,
-              meter.EMAIL,
-              meter.CREATED,
-              meter.LINE_NAME,
-              meter.COORDINATE,
+              meter.METER_NO ?? "",
+              meter.METER_NAME ?? "",
+              meter.METER_MODEL_DESC ?? "",
+              meter.MODULE_NO ?? "",
+              meter.CUSTOMER_CODE ?? "",
+              meter.CUSTOMER_NAME ?? "",
+              meter.ADDRESS ?? "",
+              meter.PHONE ?? "",
+              meter.EMAIL ?? "",
+              meter.CREATED ?? "",
+              meter.LINE_NAME ?? "",
+              meter.COORDINATE ?? "",
               lineIdToInsert,
-              meter.METER_MODEL_ID,
+              meter.METER_MODEL_ID ?? "",
               statusValue,
             ]
           );
@@ -266,21 +325,22 @@ export const SaveMeterDataToDB = async (
       }
     }
 
+    // === APPEND MODE ===
     if (options.mode === "append") {
       const existingLine = await db.executeSql(
         `SELECT LINE_ID FROM ${TABLE_NAME_INFO_LINE} WHERE LINE_ID = ?`,
         [item.LINE_ID]
       );
 
-      if (existingLine[0].rows.length > 0) {
-        console.log(`ℹ️ LINE_ID ${item.LINE_ID} đã tồn tại → bỏ qua append LINE.`);
-      } else {
+      if (existingLine[0].rows.length === 0) {
         await db.executeSql(
           `INSERT INTO ${TABLE_NAME_INFO_LINE} (LINE_ID, LINE_NAME, ADDRESS, CODE) 
            VALUES (?, ?, ?, ?)`,
           [item.LINE_ID, item.LINE_NAME, item.ADDRESS, item.CODE]
         );
         console.log("✅ Saved line data (append mode):", item.LINE_ID);
+      } else {
+        console.log(`ℹ️ LINE_ID ${item.LINE_ID} đã tồn tại → bỏ qua append LINE.`);
       }
 
       const meterList: PropsMeterModel[] = await handleGetMeterByLineFromServer(item.LINE_ID);
@@ -293,7 +353,7 @@ export const SaveMeterDataToDB = async (
 
           if (existingMeter[0].rows.length === 0) {
             const statusValue = meter.STATUS ?? "0";
-            const lineIdToInsert = meter.LINE_ID ?? item.LINE_ID; // ✅ fallback từ item.LINE_ID
+            const lineIdToInsert = meter.LINE_ID ?? item.LINE_ID;
 
             await db.executeSql(
               `INSERT INTO ${TABLE_NAME_INFO_METER} 
@@ -301,20 +361,20 @@ export const SaveMeterDataToDB = async (
                 ADDRESS, PHONE, EMAIL, CREATED, LINE_NAME, COORDINATE, LINE_ID, METER_MODEL_ID, STATUS) 
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
-                meter.METER_NO,
-                meter.METER_NAME,
-                meter.METER_MODEL_DESC,
-                meter.MODULE_NO,
-                meter.CUSTOMER_CODE,
-                meter.CUSTOMER_NAME,
-                meter.ADDRESS,
-                meter.PHONE,
-                meter.EMAIL,
-                meter.CREATED,
-                meter.LINE_NAME,
-                meter.COORDINATE,
+                meter.METER_NO ?? "",
+                meter.METER_NAME ?? "",
+                meter.METER_MODEL_DESC ?? "",
+                meter.MODULE_NO ?? "",
+                meter.CUSTOMER_CODE ?? "",
+                meter.CUSTOMER_NAME ?? "",
+                meter.ADDRESS ?? "",
+                meter.PHONE ?? "",
+                meter.EMAIL ?? "",
+                meter.CREATED ?? "",
+                meter.LINE_NAME ?? "",
+                meter.COORDINATE ?? "",
                 lineIdToInsert,
-                meter.METER_MODEL_ID,
+                meter.METER_MODEL_ID ?? "",
                 statusValue,
               ]
             );
@@ -327,10 +387,15 @@ export const SaveMeterDataToDB = async (
         console.log("⚠️ Không có meter nào để lưu.");
       }
     }
+
+    return true;
   } catch (error) {
     console.error("❌ Error saving line data:", error);
+    return false;
   }
 };
+
+
 
 
 

@@ -262,3 +262,30 @@ export function niceBytes(x) {
 
   return n.toFixed(n < 10 && l > 0 ? 1 : 0) + ' ' + units[l];
 }
+export function parseDate(timeBytes: number[]): string {
+  const [yy, MM, dd, hh, mm, ss] = timeBytes;0
+  const year = 2000 + yy;
+  return `${year}-${MM.toString().padStart(2, "0")}-${dd
+    .toString()
+    .padStart(2, "0")} ${hh.toString().padStart(2, "0")}:${mm
+    .toString()
+    .padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
+}
+
+export function parseUint32(bytes: number[]): number {
+  // Nếu ít hơn 4 byte thì padding thêm 0
+  const b0 = bytes[0] ?? 0;
+  const b1 = bytes[1] ?? 0;
+  const b2 = bytes[2] ?? 0;
+  const b3 = bytes[3] ?? 0;
+
+  return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) >>> 0;
+}
+export function parseUint16(bytes: number[]): number {
+  // Nếu ít hơn 2 byte thì padding thêm 0
+  const b0 = bytes[0] ?? 0;
+  const b1 = bytes[1] ?? 0;
+
+  // Gộp 2 byte theo little-endian
+  return (b0 | (b1 << 8)) >>> 0;
+}

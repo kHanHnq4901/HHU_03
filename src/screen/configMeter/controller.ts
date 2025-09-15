@@ -16,6 +16,8 @@ type PropsState = {
   readCycle: boolean;
   readTimeRange : boolean
   readDaysPerMonth: boolean;
+  isReading: boolean;
+  textLoading: string;
 };
 
 type PropsHook = {
@@ -30,7 +32,8 @@ type PropsHook = {
     const [state, setState] = useState<PropsState>({
       serial: "1234567890",
       cycle: "",
-      
+      isReading: false,
+      textLoading: "Đang đọc cấu hình",
       timeRange1Start: null,
       timeRange1End: null,
       timeRange2Start: null,
@@ -121,94 +124,9 @@ type PropsHook = {
     return hookProps ;
   };
 
-  export function responeSetting(payload: number[]) {
-    console.log("🔹 Xử lý Setting:", payload);
   
-    if (!payload || payload.length < 3) {
-      Alert.alert("Lỗi", "Payload không hợp lệ!");
-      return;
-    }
-  
-    const errorCode = payload[0] as ERROR_TABLE; // u8Res
-    const command = payload[1]; // u8CommandCode
-    const paramCount = payload[2]; // u8ParamCount
-  
-    if (errorCode !== ERROR_TABLE.E_SUCCESS) {
-      const message = ERROR_MESSAGES[errorCode] || "Lỗi không xác định";
-      Alert.alert("❌ Lỗi", message);
-      return;
-    }
-  
-    console.log(`✅ Thành công - Command=${command}, ParamCount=${paramCount}`);
-  
-    let offset = 3; // bắt đầu đọc LoraParamSettingType từ byte thứ 3
-    for (let i = 0; i < paramCount; i++) {
-      if (offset + 2 > payload.length) {
-        console.warn("⚠️ Payload thiếu dữ liệu cho param", i);
-        break;
-      }
-  
-      const paramId = payload[offset];
-      const lenParam = payload[offset + 1];
-      const paramData = payload.slice(offset + 2, offset + 2 + lenParam);
-  
-      console.log(
-        `📌 Param ${i + 1}: paramId=${paramId}, len=${lenParam}, data=`,
-        paramData
-      );
-  
-      applySetting(paramId, paramData);
-      offset += 2 + lenParam;
-    }
-  
-    if (offset < payload.length) {
-      console.log("ℹ️ Còn dư dữ liệu trong payload:", payload.slice(offset));
-    }
-  }
   
 
-function applySetting(paramId: number, paramData: number[]) {
-  switch (paramId) {
-    case 0x00: // LORA_WAKEUP_TIME (4 byte: [cycle, h1, h2, h3] tuỳ định nghĩa)
-      if (paramData.length === 4) {
-        const hour1 = paramData[0];
-        const hour2 = paramData[1];
-        const hour3 = paramData[2];
-        const hour4 = paramData[3];
 
-        hookProps.setState(prev => ({
-          ...prev,
-          timeRange1Start:new Date(2025, 0, 1, hour1, 0),
-          timeRange1End: new Date(2025, 0, 1, hour2, 0),
-          timeRange2Start: new Date(2025, 0, 1, hour3, 0),
-          timeRange2End: new Date(2025, 0, 1, hour4, 0),
-        }));
-      }
-      break;
-
-    case 0x01: // LORA_WAKEUP_SPECIFIC_DAYS_ID (7 byte: danh sách ngày trong tháng)
-      if (paramData.length === 7) {
-        hookProps.setState(prev => ({
-          ...prev,
-          daysPerMonth: paramData, // array [d1, d2, ... d7]
-        }));
-      }
-      break;
-
-      case 0x02: // LORA_PERIOD_LATCH_ID (2 byte uint16_t)
-      if (paramData.length === 2) {
-        // Little-endian
-        const value = (paramData[0] & 0xff) | ((paramData[1] & 0xff) << 8);
-    
-        hookProps.setState(prev => ({
-          ...prev,
-          cycle: value.toString(), // ✅ ép sang string
-        }));
-    
-        console.log("🔄 LORA_PERIOD_LATCH_ID:", value);
-      }
-      break;
-  }
-}
 
   

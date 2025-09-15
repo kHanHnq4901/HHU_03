@@ -10,14 +10,16 @@ import { Picker } from '@react-native-picker/picker';
 import CheckBox from '@react-native-community/checkbox';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { readConfig, testConfig, writeConfig } from './handleButton';
+import { readConfig, writeConfig } from './handleButton';
 import { store } from '../overview/controller';
 import { hookProps, useHookProps } from './controller';
+import { LoadingOverlay } from '../../component/loading ';
 
 export const ConfigMeterScreen = () => {
   useHookProps();
   return (
     <View style={styles.container}>
+      <LoadingOverlay visible={hookProps.state.isReading} message={hookProps.state.textLoading} />
       <View style={styles.section}>
         <View style={styles.labelRow}>
           <Text style={styles.label}>Serial</Text>
@@ -34,8 +36,6 @@ export const ConfigMeterScreen = () => {
           autoCapitalize="none"
         />
       </View>
-
-      {/* Chu kỳ */}
       <View style={styles.section}>
         <View style={styles.labelRow}>
           <CheckBox

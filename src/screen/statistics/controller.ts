@@ -14,7 +14,6 @@ type HookState = {
   textLoading: string,
   listLine: PropsLineModel[];
   listMeter: PropsMeterModel[];
-  dataMeter: PropsMeterDataModel[];
 };
 
 
@@ -25,7 +24,6 @@ export const GetHookProps = (): HookProps => {
     textLoading: '',
     listLine: [],
     listMeter: [],
-    dataMeter: [],
   });
 
   useEffect(() => {
@@ -43,14 +41,10 @@ export const GetHookProps = (): HookProps => {
         console.log (meterResults)
         const listMeter = meterResults[0].rows.raw() as PropsMeterModel[];
 
-        const dataResults = await db.executeSql("SELECT * FROM " + TABLE_NAME_METER_DATA);
-        const dataMeter = dataResults[0].rows.raw() as PropsMeterDataModel[];
-
         setState((prev) => ({
           ...prev,
           listLine,
           listMeter,
-          dataMeter,
         }));
         console.log (state.listMeter)
       } catch (error) {

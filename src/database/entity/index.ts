@@ -1,15 +1,20 @@
 export const TABLE_NAME_INFO_METER = 'INFO_METER';
 export const TABLE_NAME_INFO_LINE = 'INFO_LINE';
 export const TABLE_NAME_METER_DATA = 'METER_DATA';
-
+export const TABLE_NAME_METER_HISTORY = 'METER_HISTORY';
 export type PropsMeterDataModel = {
+  METER_NO : string; 
   TIMESTAMP : string;
   IMPORT_DATA : string;
   EXPORT_DATA: string; 
   EVENT : string;
   BATTERY : string;
   PERIOD : string;
-  DATA_RECORD : string; 
+}
+export type PropsHistoryMeterDataModel = {
+  METER_NO : string; 
+  TIMESTAMP : string;
+  DATA_RECORD : string
 }
 export type PropsLineModel = {
   LINE_ID : string;

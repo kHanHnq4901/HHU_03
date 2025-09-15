@@ -23,6 +23,7 @@ export type PropsAppSetting = {
   numRetriesRead: string;
   CMISPath: string;
   showResultOKInWriteData: boolean;
+  timeSynchronization : string;
   server: {
     host: string;
     port: string;
@@ -49,6 +50,7 @@ export const getDefaultStorageValue = (): PropsAppSetting => ({
   numRetriesRead: '1',
   CMISPath: '',
   showResultOKInWriteData: false,
+  timeSynchronization : '',
   server: {
     host: 'kh.emic.com.vn',
     port: '80',

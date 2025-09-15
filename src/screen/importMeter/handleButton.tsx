@@ -11,7 +11,7 @@ import { FillFlash, SendFlashPage } from '../../service/boardRF/bootloader';
 import { GetLineAccount, GetMeterAccount, GetMeterByLine, SaveMeterDataToDB } from '../../service/api/serverData';
 import { Alert } from 'react-native';
 import { checkTabelDBIfExist, getDBConnection } from '../../database/repository';
-import { TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER } from '../../database/entity';
+import { TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA, TABLE_NAME_METER_HISTORY } from '../../database/entity';
 
 const TAG = 'handle Btn boardBLE:';
 export const handleGetData = async () => {
@@ -101,14 +101,13 @@ export const handleGetMeterByLineFromServer = async (lineID: string) => {
 
   if (res.bSucceed && Array.isArray(res.obj)) {
     console.log('📌 Nhận được danh sách:', res.obj);
-    return res.obj; // ✅ trả về dữ liệu để setDataList
+    return res.obj; 
   } else {
     console.log('❌ Không nhận được dữ liệu hợp lệ');
-    return []; // ✅ trả về mảng rỗng thay vì undefined
+    return []; 
   }
 };
 
-// Lưu dữ liệu test vào DB
 export const handleSaveDataToDB = async () => {
   if (hookProps.state.selectedItems.size === 0) {
     Alert.alert("Thông Báo", "⚠️ Không có dữ liệu để lưu");
@@ -124,25 +123,47 @@ export const handleSaveDataToDB = async () => {
     "Xác nhận",
     `Bạn có muốn lưu dữ liệu ${selectedData.length} trạm đã chọn vào Database không?`,
     [
-      {
-        text: "Huỷ",
-        style: "cancel",
-      },
+      { text: "Huỷ", style: "cancel" },
+
+      // === APPEND MODE ===
       {
         text: "Thêm điểm thiếu",
         onPress: async () => {
           try {
-            hookProps.setState(prev => ({ ...prev, isLoading: true, textLoading : 'Đang nhập dữ liệu'}));
+            hookProps.setState(prev => ({
+              ...prev,
+              isLoading: true,
+              textLoading: "Đang nhập dữ liệu",
+            }));
+
+            let successCount = 0;
+            let failCount = 0;
+
             for (const item of selectedData) {
-              await SaveMeterDataToDB(item, { mode: "append" });
-              console.log("📌 Append:", item);
+              const result = await SaveMeterDataToDB(item, { mode: "append" });
+              if (result) {
+                console.log("✅ Append thành công:", item.LINE_ID);
+                successCount++;
+              } else {
+                console.warn("❌ Append thất bại:", item.LINE_ID);
+                failCount++;
+              }
             }
+
             hookProps.setState(prev => ({ ...prev, isLoading: false }));
-            Alert.alert("Thông báo" , "✅ Đã thêm điểm thiếu thành công");
+
+            if (failCount === 0) {
+              Alert.alert("Thông báo", `✅ Đã thêm thành công ${successCount} điểm thiếu.`);
+            } else {
+              Alert.alert(
+                "Thông báo",
+                `⚠️ Hoàn thành với lỗi.\n✅ Thành công: ${successCount}\n❌ Thất bại: ${failCount}`
+              );
+            }
           } catch (error) {
             console.error("❌ Lỗi lưu DB (append):", error);
             hookProps.setState(prev => ({ ...prev, isLoading: false }));
-            Alert.alert("Thông báo" , "❌ Lỗi khi thêm dữ liệu");
+            Alert.alert("Thông báo", "❌ Lỗi khi thêm dữ liệu");
           }
         },
       },
@@ -150,30 +171,55 @@ export const handleSaveDataToDB = async () => {
         text: "Thay thế toàn bộ",
         onPress: async () => {
           try {
-            hookProps.setState(prev => ({ ...prev, isLoading: true , textLoading : 'Đang nhập dữ liệu'}));
+            hookProps.setState(prev => ({
+              ...prev,
+              isLoading: true,
+              textLoading: "Đang nhập dữ liệu",
+            }));
+
             const db = await getDBConnection();
             if (!db) return;
-        
+
             await checkTabelDBIfExist();
             await db.executeSql(`DELETE FROM ${TABLE_NAME_INFO_LINE}`);
             await db.executeSql(`DELETE FROM ${TABLE_NAME_INFO_METER}`);
+            await db.executeSql(`DELETE FROM ${TABLE_NAME_METER_DATA}`);
+            await db.executeSql(`DELETE FROM ${TABLE_NAME_METER_HISTORY}`);
+            let successCount = 0;
+            let failCount = 0;
+
             for (const item of selectedData) {
- 
-              await SaveMeterDataToDB(item, { mode: "replace" });
-              console.log("📌 Replace:", item);
+              const result = await SaveMeterDataToDB(item, { mode: "replace" });
+              if (result) {
+                console.log("✅ Replace thành công:", item.LINE_ID);
+                successCount++;
+              } else {
+                console.warn("❌ Replace thất bại:", item.LINE_ID);
+                failCount++;
+              }
             }
+
             hookProps.setState(prev => ({ ...prev, isLoading: false }));
-            Alert.alert("Thông báo" , "✅ Đã thay thế toàn bộ dữ liệu thành công");
+
+            if (failCount === 0) {
+              Alert.alert("Thông báo", `✅ Đã thay thế toàn bộ dữ liệu (${successCount}) thành công.`);
+            } else {
+              Alert.alert(
+                "Thông báo",
+                `⚠️ Hoàn thành với lỗi.\n✅ Thành công: ${successCount}\n❌ Thất bại: ${failCount}`
+              );
+            }
           } catch (error) {
             console.error("❌ Lỗi lưu DB (replace):", error);
             hookProps.setState(prev => ({ ...prev, isLoading: false }));
-            Alert.alert("Thông báo" , "❌ Lỗi khi thay thế dữ liệu");
+            Alert.alert("Thông báo", "❌ Lỗi khi thay thế dữ liệu");
           }
         },
       },
     ]
   );
 };
+
 
 
 

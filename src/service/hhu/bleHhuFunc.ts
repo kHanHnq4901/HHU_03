@@ -245,13 +245,12 @@ export const handleUpdateValueForCharacteristic = (data: { value: number[] }) =>
   console.log('data update for characteristic:', data.value);
   const buf = Buffer.from(data.value);
 
-  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x05) { // kiểm tra tối thiểu
+  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x08) { // kiểm tra tối thiểu
     console.log("✅ Header hợp lệ");
 
     const moduleType = buf[1];
     const commandType = buf[2];
     const lenPayload = buf[3];
-
     const meterSerialBytes = buf.slice(4, 14); // 10 byte meter serial
     const meterSerial = meterSerialBytes.toString('ascii'); // nếu là string ASCII
 

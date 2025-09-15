@@ -1,5 +1,4 @@
 import React, { Dispatch, SetStateAction, useState } from 'react';
-import { PropsKHCMISModel } from '../database/model';
 import { getDefaultStorageValue, PropsAppSetting } from '../service/storage';
 import { Platform } from 'react-native';
 
@@ -32,6 +31,7 @@ type PropsState = {
   app: {
     mdVersion: boolean;
     enableDebug: boolean;
+
   };
   alert: {
     show: boolean;
@@ -59,22 +59,7 @@ type PropsState = {
   isCredential: boolean;
   
 };
-
-type PropsDataDB = {
-  item: PropsKHCMISModel; 
-  id: string;
-};
-
-type PropsData = {
-  dataBD: PropsDataDB[];
-  codeStation: string[];
-  codeBook: string[];
-  codeColumn: string[];
-};
-
 export type PropsStore = {
-  data: PropsData[];
-  setData: Dispatch<SetStateAction<PropsData[]>>;
   state: PropsState;
   setState: Dispatch<React.SetStateAction<PropsState>>;
 };
@@ -82,7 +67,6 @@ export type PropsStore = {
 export const storeContext = React.createContext<PropsStore>(null);
 
 export const StoreProvider = ({ children }) => {
-  const [data, setData] = useState<PropsData[]>([]);
 
   const [hook, setHook] = useState<PropsState>({
     hhu: {
@@ -95,7 +79,6 @@ export const StoreProvider = ({ children }) => {
       name: '',
       serviceUUID: '',          
       characteristicUUID: '',
-      device: null,
     },
     net: {
       netReachAble: false,
@@ -134,8 +117,6 @@ export const StoreProvider = ({ children }) => {
   });
 
   const initialalue: PropsStore = {
-    data: data,
-    setData: setData,
     state: hook,
     setState: setHook,
   };

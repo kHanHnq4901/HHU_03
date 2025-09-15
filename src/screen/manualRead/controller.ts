@@ -1,40 +1,63 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useMemo } from "react";
 import { Alert } from "react-native";
 import { PropsLineModel, PropsMeterDataModel, PropsMeterModel, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from "../../database/entity";
 import { checkTabelDBIfExist, getDBConnection } from "../../database/repository";
 import { PropsStore, storeContext } from "../../store";
+import { getDistanceValue } from "../../util/location";
 
 export const hookProps = {} as HookProps;
 export type HookProps = {
   state: HookState;
   setState: React.Dispatch<React.SetStateAction<HookState>>;
 };
-
-type HookState = {
-  currentLocation: number[] | null;
+export let store = {} as PropsStore;
+type PropsReadingStatus = {
+  meterNo: string;
+  name: string;
+  status: "reading" | "success" | "fail";
+} | null;
+export type PropDataMeter = {
+  serial: string;
+  currentTime: string;
+  impData: number;        
+  expData: number;        
+  event: string;
+  batteryLevel: string;  
+  latchPeriod: string;
+  
+  dataRecords: {
+    timestamp: string;  // thời gian (ISO hoặc HH:mm)
+    value: number;      // chỉ số tương ứng
+  }[];
+};
+// Thêm selectedStatus vào state nếu muốn lưu global
+export type HookState = {
+  readingStatus : PropsReadingStatus; 
+  currentLocation: number[];
   searchText: string;
   isLoading: boolean;
-  isAutoReading : boolean;
+  isAutoReading: boolean;
   textLoading: string;
-  listLine: PropsLineModel[];
   listMeter: PropsMeterModel[];
-  dataMeter: PropsMeterDataModel[];
-  statusCount: { [status: number]: number }; 
+  filteredMeters: PropsMeterModel[];
+  selectedStatus?: number;
+  modalVisible : boolean;
+  meterData: PropDataMeter | null; 
 };
-
-export let store = {} as PropsStore;
 
 export const GetHookProps = (): HookProps => {
   const [state, setState] = useState<HookState>({
-    currentLocation: null, 
+    readingStatus : null,
+    currentLocation: [105.834160, 21.027763],
     searchText: "",
     isLoading: false,
-    isAutoReading : false,
-    textLoading: '',
-    listLine: [],
+    isAutoReading: false,
+    textLoading: "",
     listMeter: [],
-    dataMeter: [],
-    statusCount: {}, // ✅ khởi tạo rỗng
+    filteredMeters : [],
+    selectedStatus: undefined,
+    modalVisible : false,
+    meterData: null,
   });
 
   useEffect(() => {
@@ -45,28 +68,13 @@ export const GetHookProps = (): HookProps => {
 
         await checkTabelDBIfExist();
 
-        const lineResults = await db.executeSql("SELECT * FROM " + TABLE_NAME_INFO_LINE);
-        const listLine = lineResults[0].rows.raw() as PropsLineModel[];
-
-        const meterResults = await db.executeSql("SELECT * FROM " + TABLE_NAME_INFO_METER);
+        const meterResults = await db.executeSql(`SELECT * FROM ${TABLE_NAME_INFO_METER}`);
         const listMeter = meterResults[0].rows.raw() as PropsMeterModel[];
 
-        const dataResults = await db.executeSql("SELECT * FROM " + TABLE_NAME_METER_DATA);
-        const dataMeter = dataResults[0].rows.raw() as PropsMeterDataModel[];
-
-        // ✅ Đếm số lượng theo STATUS
-        const statusCount: { [status: number]: number } = {};
-        listMeter.forEach((item) => {
-          const status = (item as any).STATUS ?? 0; // Nếu có cột STATUS
-          statusCount[status] = (statusCount[status] || 0) + 1;
-        });
 
         setState((prev) => ({
           ...prev,
-          listLine,
           listMeter,
-          dataMeter,
-          statusCount, // ✅ lưu vào state
         }));
       } catch (error) {
         console.error("❌ Lỗi khi load dữ liệu:", error);
@@ -80,7 +88,7 @@ export const GetHookProps = (): HookProps => {
   store = useContext(storeContext) as PropsStore;
 
   // Gắn global cho hookProps
-  hookProps.state = state;
+  hookProps.state = { ...state };
   hookProps.setState = setState;
 
   return hookProps;

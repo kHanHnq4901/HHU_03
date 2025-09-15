@@ -42,7 +42,7 @@ export const StatisticsScreen = () => {
             <Text style={[styles.status, { color: "green" }]}>Thành công: {thanhCong}</Text>
           </View>
           <View style={styles.statusRow}>
-            <Text style={[styles.status, { color: "red" }]}>Lỗi: {loi}</Text>
+            <Text style={[styles.status, { color: "red" }]}>Thất bại: {loi}</Text>
             <Text style={[styles.status, { color: "#ff9900" }]}>Ghi tay: {ghiTay}</Text>
             <Text style={[styles.status, { color: "#d63384" }]}>Bất thường: {batThuong}</Text>
           </View>

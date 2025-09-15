@@ -2,7 +2,7 @@ import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { TYPE_READ_RF } from '../../service/hhu/defineEM';
 import { NAME_CSDL, PATH_EXECUTE_CSDL, PATH_EXPORT_CSDL } from '../../shared/path';
 import { isNumeric, showAlert } from '../../util';
-import { dumyEntity, GetStringSelectEntity,PropsInfoMeterEntity, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from '../entity';
+import { dumyEntity, GetStringSelectEntity,PropsInfoMeterEntity, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA, TABLE_NAME_METER_HISTORY } from '../entity';
 import { dataDBTabel, getTypeOfColumn, PropsPercentRead } from '../model';
 import { PropsFilter, PropsPagination, PropsSorting } from '../service';
 import RNFS from 'react-native-fs';
@@ -19,44 +19,87 @@ let db: SQLite.SQLiteDatabase | null = null;
 export const checkTabelDBIfExist = async (): Promise<boolean> => {
   try {
     const db = await getDBConnection();
-    if (!db) {
-      return false;
-    }
+    if (!db) return false;
 
     // Helper tạo bảng
-    const createTable = async (tableName: string, entity: Record<string, any>) => {
+    const createTable = async (tableName: string, entity: Record<string, any>, indexes: string[] = []) => {
       let query = `CREATE TABLE IF NOT EXISTS ${tableName} (`;
       let first = true;
       for (let key in entity) {
-        if (first) {
-          first = false;
-        } else {
-          query += ', ';
-        }
-        query += `${key} TEXT`; // mặc định TEXT, có thể tùy chỉnh kiểu
+        if (first) first = false;
+        else query += ', ';
+        query += `${key} TEXT`; // mặc định TEXT
       }
       query += ')';
       await db.executeSql(query);
       console.log(`✅ Table ${tableName} checked/created`);
+
+      // Tạo index cho bảng
+      for (const idx of indexes) {
+        await db.executeSql(
+          `CREATE INDEX IF NOT EXISTS idx_${tableName}_${idx} ON ${tableName} (${idx})`
+        );
+        console.log(`🔎 Index idx_${tableName}_${idx} created`);
+      }
     };
 
-    // Tạo 3 bảng
-    await createTable(TABLE_NAME_INFO_METER, dumyEntity);
-    await createTable(TABLE_NAME_INFO_LINE, {
-      LINE_ID: '',
-      LINE_NAME: '',
-      ADDRESS: '',
-      CODE: '',
-    });
-    await createTable(TABLE_NAME_METER_DATA, {
-      TIMESTAMP: '',
-      IMPORT_DATA: '',
-      EXPORT_DATA: '',
-      EVENT: '',
-      BATTERY: '',
-      PERIOD: '',
-      DATA_RECORD: '',
-    });
+    // Bảng meter info
+    await createTable(
+      TABLE_NAME_INFO_METER,
+      {
+        METER_NO: '',
+        METER_NAME: '',
+        METER_MODEL_DESC: '',
+        MODULE_NO: '',
+        CUSTOMER_CODE: '',
+        CUSTOMER_NAME: '',
+        ADDRESS: '',
+        PHONE: '',
+        EMAIL: '',
+        CREATED: '',
+        LINE_NAME: '',
+        COORDINATE: '',
+        LINE_ID: '',
+        METER_MODEL_ID: '',
+        STATUS: '',
+      },
+      ['METER_NO', 'LINE_ID', 'CUSTOMER_CODE'] // index các cột hay tra cứu
+    );
+
+    // Bảng line info
+    await createTable(
+      TABLE_NAME_INFO_LINE,
+      {
+        LINE_ID: '',
+        LINE_NAME: '',
+        ADDRESS: '',
+        CODE: '',
+      },
+      ['LINE_ID', 'CODE']
+    );
+    await createTable(
+      TABLE_NAME_METER_DATA,
+      {
+        METER_NO: "",
+        IMPORT_DATA: "",
+        EXPORT_DATA: "",
+        EVENT: "",
+        BATTERY: "",
+        PERIOD: "",
+        TIMESTAMP: "",  // Thời gian lần đọc gần nhất
+      },
+      ["METER_NO"] // Primary key: mỗi METER_NO chỉ có 1 record
+    );
+    // Bảng meter data
+    await createTable(
+      "METER_HISTORY",
+      {
+        METER_NO: "",
+        TIMESTAMP: "",   // ISO string
+        DATA_RECORD: "", // Dữ liệu thô (số đo từng lần đọc)
+      },
+      ["METER_NO", "TIMESTAMP"]
+    );
 
     return true;
   } catch (err: any) {
@@ -65,7 +108,84 @@ export const checkTabelDBIfExist = async (): Promise<boolean> => {
   }
 };
 
+export const insertMeterData = async (data: {
+  METER_NO: string;
+  TIMESTAMP: string;
+  IMPORT_DATA: string;
+  EXPORT_DATA: string;
+  EVENT: string;
+  BATTERY: string;
+  PERIOD: string;
+}): Promise<boolean> => {
+  try {
+    const db = await getDBConnection();
+    if (!db) return false;
 
+    const query = `
+      INSERT OR REPLACE INTO ${TABLE_NAME_METER_DATA} 
+      (METER_NO, TIMESTAMP, IMPORT_DATA, EXPORT_DATA, EVENT, BATTERY, PERIOD)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    await db.executeSql(query, [
+      data.METER_NO,
+      data.TIMESTAMP,
+      data.IMPORT_DATA,
+      data.EXPORT_DATA,
+      data.EVENT,
+      data.BATTERY,
+      data.PERIOD,
+    ]);
+
+    console.log(`✅ [METER_DATA] ${data.METER_NO} ${data.TIMESTAMP}`);
+    return true;
+  } catch (err: any) {
+    console.error("❌ Lỗi insert METER_DATA:", err.message);
+    return false;
+  }
+};
+
+
+export const insertMeterHistoryBatch = async (
+  records: { METER_NO: string; TIMESTAMP: string; DATA_RECORD: string }[]
+): Promise<void> => {
+  try {
+    if (records.length === 0) return;
+    const db = await getDBConnection();
+    if (!db) return;
+
+    const placeholders = records.map(() => "(?, ?, ?)").join(", ");
+    const query = `INSERT INTO ${TABLE_NAME_METER_HISTORY} (METER_NO, TIMESTAMP, DATA_RECORD) VALUES ${placeholders}`;
+
+    const values = records.flatMap(r => [r.METER_NO, r.TIMESTAMP, r.DATA_RECORD]);
+
+    await db.executeSql(query, values);
+    console.log(`📥 Batch inserted ${records.length} history records for ${records[0].METER_NO}`);
+  } catch (err: any) {
+    console.error("❌ Lỗi batch insert METER_HISTORY:", err.message);
+  }
+};
+
+export const changeMeterStatus = async (
+  meterNo: string,
+  status: string
+): Promise<boolean> => {
+  try {
+    const db = await getDBConnection();
+    if (!db) {
+      console.log("❌ Không thể mở DB");
+      return false;
+    }
+
+    const query = `UPDATE ${TABLE_NAME_INFO_METER} SET STATUS = ? WHERE METER_NO = ?`;
+    await db.executeSql(query, [status, meterNo]);
+    console.log(`✅ STATUS của meter ${meterNo} đã đổi thành ${status}`);
+    return true;
+  } catch (err: any) {
+    console.log("❌ Lỗi changeMeterStatus:", err.message);
+    return false;
+  }
+};
 
 export async function BackupDb(){
 

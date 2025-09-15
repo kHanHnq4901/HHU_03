@@ -1,35 +1,85 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, FlatList } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { hookProps, useHookProps } from "./controller";
 import { LoadingOverlay } from "../../component/loading ";
 
+const InfoRow = ({ label, value }: { label: string; value: string | number }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value}</Text>
+  </View>
+);
+
 export const DetailMeterScreen = () => {
-   useHookProps();
   const route = useRoute<any>();
   const { meter } = route.params;
 
-  const meterRecords = hookProps.state.dataMeter
-    .filter((rec) => rec.DATA_RECORD === meter.METER_NO)
-    .slice(0, 90);
+  useHookProps(meter.METER_NO);
+
+  const meterData = hookProps.state.meterData;
+  const historyData = hookProps.state.historyData ?? [];
+  const topRecords = historyData.slice(0, 90); // ✅ tuỳ theo độ dài
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", padding: 16 }}>
-        <LoadingOverlay visible={hookProps.state.isLoading} message={hookProps.state.textLoading} />
-      <Text style={styles.header}>90 bản ghi gần nhất của {meter.METER_NO}</Text>
-      <ScrollView>
-        {meterRecords.length > 0 ? (
-          meterRecords.map((rec, idx) => (
-            <View key={idx} style={styles.recordItem}>
-              <Text style={styles.recordIndex}>{idx + 1}.</Text>
-              <Text style={styles.recordText}>
-                {rec.IMPORT_DATA}/{rec.EXPORT_DATA}{" "}
-                <Text style={{ color: "#888" }}>({rec.TIMESTAMP})</Text>
-              </Text>
-            </View>
-          ))
+    <View style={styles.container}>
+      <LoadingOverlay
+        visible={hookProps.state.isLoading}
+        message={hookProps.state.textLoading}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* ===== THÔNG TIN METER ===== */}
+        {meterData && (
+          <>
+            <Text style={styles.sectionTitle}>📊 Kết quả đọc</Text>
+            <InfoRow label="🔧 Serial" value={meterData.METER_NO} />
+            <InfoRow
+              label="⏰ Thời gian"
+              value={new Date(meterData.TIMESTAMP).toLocaleString("vi-VN")}
+            />
+            <InfoRow label="🔢 Chỉ số xuôi" value={meterData.IMPORT_DATA} />
+            <InfoRow label="📤 Chỉ số ngược" value={meterData.EXPORT_DATA} />
+            <InfoRow label="🔋 Pin" value={meterData.BATTERY} />
+            <InfoRow label="⏱ Chu kỳ chốt" value={meterData.PERIOD} />
+
+            <Text style={styles.sectionTitle}>📝 Sự kiện</Text>
+            {meterData.EVENT ? (
+              <Text style={styles.eventItem}>• {meterData.EVENT}</Text>
+            ) : (
+              <Text style={styles.eventItem}>Không có sự kiện</Text>
+            )}
+          </>
+        )}
+
+        {/* ===== LIST HISTORY ===== */}
+        {topRecords.length > 0 ? (
+          <>
+            <Text style={styles.sectionTitle}>
+              📂 {topRecords.length} bản ghi gần nhất
+            </Text>
+            <FlatList
+              data={topRecords}
+              keyExtractor={(_, idx) => idx.toString()}
+              scrollEnabled={false}
+              renderItem={({ item, index }) => (
+                <View
+                  style={[
+                    styles.recordItem,
+                    index % 2 === 0 && { backgroundColor: "#f7f9fc" },
+                  ]}
+                >
+                  <Text style={styles.recordIndex}>{index + 1}</Text>
+                  <Text style={styles.recordDate}>
+                    {new Date(item.TIMESTAMP).toLocaleString("vi-VN")}
+                  </Text>
+                  <Text style={styles.recordValue}>{item.DATA_RECORD}</Text>
+                </View>
+              )}
+            />
+          </>
         ) : (
-          <Text>Không có dữ liệu</Text>
+          <Text style={styles.noData}>Không có dữ liệu lịch sử</Text>
         )}
       </ScrollView>
     </View>
@@ -37,13 +87,35 @@ export const DetailMeterScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  header: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: "#333" },
+  container: { flex: 1, backgroundColor: "#f9fafb", paddingHorizontal: 8 },
+  scrollContent: { paddingBottom: 16 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 8,
+    marginBottom: 4,
+    color: "#1e293b",
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#e5e7eb",
+  },
+  infoLabel: { fontSize: 14, color: "#374151", fontWeight: "500" },
+  infoValue: { fontSize: 14, color: "#0f172a", fontWeight: "bold" },
+  eventItem: { fontSize: 13, color: "#4b5563", marginBottom: 2 },
   recordItem: {
     flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#e5e7eb",
   },
-  recordIndex: { fontWeight: "bold", width: 30 },
-  recordText: { fontSize: 14, color: "#333" },
+  recordIndex: { fontWeight: "bold", width: 30, textAlign: "center" },
+  recordDate: { flex: 1, fontSize: 12, color: "#64748b" },
+  recordValue: { fontWeight: "bold", fontSize: 13, color: "#1e293b" },
+  noData: { textAlign: "center", color: "#9ca3af", marginTop: 20 },
 });

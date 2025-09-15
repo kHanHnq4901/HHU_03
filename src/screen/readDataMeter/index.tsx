@@ -9,6 +9,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  SafeAreaView,
 } from 'react-native';
 import { Button } from '../../component/button/button';
 import { Text } from '../../component/Text';
@@ -16,19 +17,20 @@ import { CommonHeight, normalize, CommonFontSize } from '../../theme';
 import { onReadData } from './handleButton';
 import { GetHookProps, hookProps } from './controller';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { LoadingOverlay } from '../../component/loading ';
 
 const inputAccessoryViewID = 'uniqueID';
 
 export const RealDataMeterScreen = () => {
   GetHookProps();
-  const { state, setState } = hookProps;
+  hookProps;
 
   const toggleDetailedRead = () => {
-    setState((prev) => ({ ...prev, isDetailedRead: !prev.isDetailedRead }));
+    hookProps.setState((prev) => ({ ...prev, isDetailedRead: !prev.isDetailedRead }));
   };
 
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
       {Platform.OS === 'ios' && (
         <InputAccessoryView nativeID={inputAccessoryViewID}>
           <Button onPress={() => Keyboard.dismiss()} title="OK" />
@@ -37,35 +39,39 @@ export const RealDataMeterScreen = () => {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
+        <LoadingOverlay visible={hookProps.state.isReading} message={hookProps.state.textLoading} />
+
         {/* Serial + toggle chi tiết */}
         <View style={styles.serialRow}>
           <TextInput
             placeholder="🔢 Nhập serial công tơ"
-            value={state.serial}
+            value={hookProps.state.serial}
             style={styles.textInput}
             placeholderTextColor="#888"
-            onChangeText={(text) => setState((prev) => ({ ...prev, serial: text }))}
+            onChangeText={(text) =>
+              hookProps.setState((prev) => ({ ...prev, serial: text }))
+            }
           />
           <TouchableOpacity
             style={[
               styles.checkboxContainer,
-              state.isDetailedRead && styles.checkboxContainerActive,
+              hookProps.state.isDetailedRead && styles.checkboxContainerActive,
             ]}
             onPress={toggleDetailedRead}
             activeOpacity={0.7}
           >
             <Icon
-              name={state.isDetailedRead ? 'check-circle' : 'checkbox-blank-outline'}
+              name={hookProps.state.isDetailedRead ? 'check-circle' : 'checkbox-blank-outline'}
               size={20}
-              color={state.isDetailedRead ? '#fff' : '#2f4f9d'}
+              color={hookProps.state.isDetailedRead ? '#fff' : '#2f4f9d'}
             />
             <Text
               style={[
                 styles.checkboxLabel,
-                state.isDetailedRead && { color: '#fff' },
+                hookProps.state.isDetailedRead && { color: '#fff' },
               ]}
             >
               Chi tiết
@@ -73,20 +79,21 @@ export const RealDataMeterScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Thông tin kết quả đọc */}
-        {state.meterData && (
+        {/* Hiển thị thông tin kết quả đọc */}
+        {hookProps.state.meterData && (
           <>
             <Text style={styles.sectionTitle}>📊 Kết quả đọc</Text>
-            <InfoRow label="🔧 Serial" value={state.meterData.serial} />
-            <InfoRow label="⏰ Thời gian" value={state.meterData.currentTime} />
-            <InfoRow label="🔢 Chỉ số xuôi" value={state.meterData.impData} />
-            <InfoRow label="📤 Chỉ số ngược" value={state.meterData.expData} />
-            <InfoRow label="🔋 Pin" value={state.meterData.batteryLevel} />
-            <InfoRow label="⏱ Chu kỳ chốt" value={state.meterData.latchPeriod} />
+            <InfoRow label="🔧 Serial" value={hookProps.state.meterData.serial} />
+            <InfoRow label="⏰ Thời gian" value={hookProps.state.meterData.currentTime} />
+            <InfoRow label="🔢 Chỉ số xuôi" value={hookProps.state.meterData.impData} />
+            <InfoRow label="📤 Chỉ số ngược" value={hookProps.state.meterData.expData} />
+            <InfoRow label="🔋 Pin" value={hookProps.state.meterData.batteryLevel} />
+            <InfoRow label="⏱ Chu kỳ chốt" value={hookProps.state.meterData.latchPeriod} />
 
             <Text style={styles.sectionTitle}>📝 Sự kiện</Text>
-            {Array.isArray(state.meterData.event) && state.meterData.event.length > 0 ? (
-              state.meterData.event.map((e: string, i: number) => (
+            {Array.isArray(hookProps.state.meterData.event) &&
+            hookProps.state.meterData.event.length > 0 ? (
+              hookProps.state.meterData.event.map((e: string, i: number) => (
                 <Text key={i} style={styles.eventItem}>
                   • {e}
                 </Text>
@@ -97,12 +104,12 @@ export const RealDataMeterScreen = () => {
           </>
         )}
 
-        {/* Danh sách bản ghi */}
-        {(state.meterData?.dataRecords?.length ?? 0) > 0 && (
+        {/* Hiển thị lịch sử nếu có */}
+        {(hookProps.state.historyData?.dataRecords?.length ?? 0) > 0 && (
           <>
             <Text style={styles.sectionTitle}>📂 90 bản ghi gần nhất</Text>
             <FlatList
-              data={state.meterData?.dataRecords ?? []}
+              data={hookProps.state.historyData?.dataRecords ?? []}
               keyExtractor={(_, idx) => idx.toString()}
               renderItem={({ item, index }) => (
                 <View
@@ -122,15 +129,15 @@ export const RealDataMeterScreen = () => {
         )}
       </ScrollView>
 
-      {/* Button đọc dữ liệu */}
+      {/* Nút đọc dữ liệu dưới cùng */}
       <View style={styles.btnBottom}>
         <Button
           style={styles.button}
-          label={state.isDetailedRead ? '📖 Đọc chi tiết' : '📡 Đọc dữ liệu'}
+          label={hookProps.state.isDetailedRead ? '📖 Đọc chi tiết' : '📡 Đọc dữ liệu'}
           onPress={() => onReadData()}
         />
       </View>
-    </>
+    </SafeAreaView>
   );
 };
 
@@ -142,9 +149,12 @@ const InfoRow = ({ label, value }: { label: string; value: any }) => (
 );
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f7fb',
+  },
+  container: {
+    flex: 1,
     paddingHorizontal: 15,
     paddingTop: 15,
   },
@@ -238,7 +248,7 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   btnBottom: {
-    marginVertical: 12,
+    paddingBottom: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },

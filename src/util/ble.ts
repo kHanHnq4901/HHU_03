@@ -111,38 +111,39 @@ export const startNotification = async (idPeripheral: string) => {
   }
 };
 
-export const send = async (idPeripheral: string, data: number[]) => {
+// 🟢 Hàm kiểm tra kết nối và thông báo
+export const checkPeripheralConnection = async (idPeripheral: string): Promise<boolean> => {
   try {
     const isConnected = await BleManager.isPeripheralConnected(idPeripheral, []);
-
     if (!isConnected) {
       Alert.alert(
         'Thông báo',
-        'Chưa kết nối với thiết bị,Bạn có muốn kết nối lại với thiết bị đã dùng trước đó không?',
+        'Chưa kết nối với thiết bị, bạn có muốn kết nối lại với thiết bị đã dùng trước đó không?',
         [
-          {
-            text: 'Hủy',
-            style: 'cancel',
-          },
-          {
-            text: 'Kết nối lại',
-            onPress: () => onBlePress(), // Gọi hàm reconnect
-          },
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Kết nối lại', onPress: () => onBlePress() },
         ],
         { cancelable: true }
       );
-      return;
+      return false;
     }
-    
-
-    // 🟢 Nếu đã kết nối thì ghi
-    await BleManager.write(idPeripheral, service, characteristic, data);
-
-    console.log(TAG + "Data sent:", data);
-  } catch (err: any) {
-    console.log(TAG + "Error sending:", err);
+    return true;
+  } catch (err) {
+    console.log(TAG + 'Lỗi kiểm tra kết nối:', err);
+    return false;
   }
 };
+
+// 🟢 Hàm send mới gọn gàng hơn
+export const send = async (idPeripheral: string, data: number[]) => {
+  try {
+    await BleManager.write(idPeripheral, service, characteristic, data);
+    console.log(TAG + 'Data sent:', data);
+  } catch (err: any) {
+    console.log(TAG + 'Error sending:', err);
+  }
+};
+
 function toHexString(byteArray: number[]) {
   return byteArray
     .map(b => b.toString(16).padStart(2, '0')) // Chuyển sang hex, thêm 0 nếu 1 ký tự

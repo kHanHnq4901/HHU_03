@@ -72,23 +72,21 @@ export const buildSetParamPacket = (
 
 export const buildQueryDataPacket = (
   meterSerial: string,
-  isDetailedRead: boolean
+  isDetailedRead?: boolean
 ): number[] => {
   // ✅ Thêm 1 byte biểu diễn trạng thái isDetailedRead
   const detailedReadByte = isDetailedRead ?   LoraCommandCode.LORA_CMD_QUERY_DATA_DETAIL : LoraCommandCode.LORA_CMD_QUERY_DATA;
 
   const payload = [
-    LoraCommandCode.QUERY_DATA,
     detailedReadByte, // ✅ byte mới
+    LoraCommandCode.LORA_CMD_QUERY_DATA_DETAIL,
   ];
-
   return buildPacket(
     CommandType.LORA_QUERY_DATA,
     payload,
     stringToBytes(meterSerial)
   );
 };
-
 
 export const buildLoraWakeUpPacket = (meterSerial: string): number[] => {
   const wakeupString = "WM08WakeUpNow";
