@@ -14,8 +14,9 @@ import { checkUpdateHHU } from '../api';
 import { Platform } from 'react-native';
 import { bleManagerEmitter } from '../../screen/ble/controller';
 import BleManager from 'react-native-ble-manager';
-import { responeSetting } from '../../screen/configMeter/controller';
+
 import { responeData } from '../../screen/readDataMeter/handleButton';
+import { responeSetting } from '../../screen/configMeter/handleButton';
 const KEY_STORAGE = 'BLE_INFO';
 const TAG = 'Ble Func:';
 

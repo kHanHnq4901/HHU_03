@@ -11,24 +11,26 @@ export type HookProps = {
 
 export type PropDataMeter = {
   serial: string;
-  currentTime: string;
+  currentTime: Date | null ;
   impData: number;
   expData: number;
   event: string;
   batteryLevel: string;
   latchPeriod: string;
+  totalPacket : number;
 };
 
 export type PropHistoryDataMeter = {
   serial: string;
   dataRecords: {
-    timestamp: string; // ISO hoặc HH:mm
+    timestamp: Date;
     value: number;
   }[];
 };
 
 export type HookState = {
   serial: string;
+  currentTime: Date | null ;
   isDetailedRead: boolean;
   meterData: PropDataMeter | null;       // Header (1 dòng duy nhất)
   historyData: PropHistoryDataMeter | null; // Toàn bộ dataRecords
@@ -42,6 +44,7 @@ export let store = {} as PropsStore;
 export const GetHookProps = (): HookProps => {
   const [state, setState] = useState<HookState>({
     serial: "1234567890",
+    currentTime : null,
     isDetailedRead: false,
     meterData: null,
     historyData: null, // ✅ thêm state cho history

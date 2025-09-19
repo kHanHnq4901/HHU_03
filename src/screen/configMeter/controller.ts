@@ -27,7 +27,7 @@ type PropsHook = {
   onChangeTime: (mode: string, selectedDate?: Date) => void;
 };
 
-// ---- Custom hook ----
+// ---- Custom hook ----fv
   export const useHookProps = (): PropsHook => {
     const [state, setState] = useState<PropsState>({
       serial: "1234567890",
@@ -43,7 +43,7 @@ type PropsHook = {
 
       daysPerMonth: [],
       openDays: false,
-      dayItems: Array.from({ length: 28 }, (_, i) => ({
+      dayItems: Array.from({ length: 31 }, (_, i) => ({
         label: `${i + 1}`,
         value: i + 1,
       })),

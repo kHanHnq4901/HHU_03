@@ -23,6 +23,7 @@ import { clearLocationWatch, requestLocationPermission, startAutoRead, stopAutoR
 import { formatDistance, getDistanceValue } from '../../util/location';
 import { PulsingDot } from '../../component/PointAnnotation';
 import { BlinkingDot } from '../../component/blinkingDot';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export const AutomaticReadScreen = () => {
   // Khởi tạo hookProps
@@ -122,24 +123,14 @@ export const AutomaticReadScreen = () => {
           key="current-location"
           id="current-location"
           coordinate={hookProps.state.currentLocation}
-          title="Địa điểm của tôi"
-          snippet="Đây là vị trí hiện tại của bạn"
-          selected
           anchor={{ x: 0.5, y: 1 }}
         >
-          <View style={{ alignItems: "center", justifyContent: "center" }}>
-            <View
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: 7,
-                backgroundColor: "#2196f3",
-                borderWidth: 2,
-                borderColor: "#fff",
-              }}
-            />
-            
-          </View>
+          <MaterialCommunityIcons
+            name="map-marker"
+            size={40}
+            color="#d32f2f" // đỏ đặc trưng Google Maps
+            style={{ textShadowColor: "#000", textShadowRadius: 2 }}
+          />
         </PointAnnotation>
 
         {/* Meter markers */}

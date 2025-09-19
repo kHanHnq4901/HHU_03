@@ -10,6 +10,7 @@ export const KEY_MA_CONG_TO = 'KEY_MA_CONG_TO';
 export type PropsSettingAndAlarm = {
   distance: string;
   zoomLevel: string;
+  vehicle : "driving" | "walking" | "motorcycling" | "truck";
   typeAlarm: 'Value' | 'Percent';
   upperThresholdPercent: string;
   lowerThresholdPercent: string;
@@ -41,6 +42,7 @@ export const getDefaultStorageValue = (): PropsAppSetting => ({
   setting: {
     distance: '500',
     zoomLevel: '15',
+    vehicle : 'motorcycling',
     typeAlarm: 'Value',
     upperThresholdPercent: '500',
     lowerThresholdPercent: '0',

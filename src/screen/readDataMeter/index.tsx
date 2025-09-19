@@ -19,14 +19,17 @@ import { GetHookProps, hookProps } from './controller';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LoadingOverlay } from '../../component/loading ';
 
+
 const inputAccessoryViewID = 'uniqueID';
 
 export const RealDataMeterScreen = () => {
   GetHookProps();
-  hookProps;
 
   const toggleDetailedRead = () => {
-    hookProps.setState((prev) => ({ ...prev, isDetailedRead: !prev.isDetailedRead }));
+    hookProps.setState((prev) => ({
+      ...prev,
+      isDetailedRead: !prev.isDetailedRead,
+    }));
   };
 
   return (
@@ -42,12 +45,15 @@ export const RealDataMeterScreen = () => {
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <LoadingOverlay visible={hookProps.state.isReading} message={hookProps.state.textLoading} />
+        <LoadingOverlay
+          visible={hookProps.state.isReading}
+          message={hookProps.state.textLoading}
+        />
 
-        {/* Serial + toggle chi tiết */}
+        {/* Serial input + Toggle */}
         <View style={styles.serialRow}>
           <TextInput
-            placeholder="🔢 Nhập serial công tơ"
+            placeholder="Nhập serial công tơ"
             value={hookProps.state.serial}
             style={styles.textInput}
             placeholderTextColor="#888"
@@ -64,7 +70,11 @@ export const RealDataMeterScreen = () => {
             activeOpacity={0.7}
           >
             <Icon
-              name={hookProps.state.isDetailedRead ? 'check-circle' : 'checkbox-blank-outline'}
+              name={
+                hookProps.state.isDetailedRead
+                  ? 'check-circle'
+                  : 'checkbox-blank-outline'
+              }
               size={20}
               color={hookProps.state.isDetailedRead ? '#fff' : '#2f4f9d'}
             />
@@ -79,35 +89,84 @@ export const RealDataMeterScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Hiển thị thông tin kết quả đọc */}
+        {/* Kết quả đọc */}
         {hookProps.state.meterData && (
-          <>
-            <Text style={styles.sectionTitle}>📊 Kết quả đọc</Text>
-            <InfoRow label="🔧 Serial" value={hookProps.state.meterData.serial} />
-            <InfoRow label="⏰ Thời gian" value={hookProps.state.meterData.currentTime} />
-            <InfoRow label="🔢 Chỉ số xuôi" value={hookProps.state.meterData.impData} />
-            <InfoRow label="📤 Chỉ số ngược" value={hookProps.state.meterData.expData} />
-            <InfoRow label="🔋 Pin" value={hookProps.state.meterData.batteryLevel} />
-            <InfoRow label="⏱ Chu kỳ chốt" value={hookProps.state.meterData.latchPeriod} />
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>
+              <Icon name="chart-bar" size={16} color="#2f4f9d" /> Kết quả đọc
+            </Text>
+            <InfoRow
+              icon="barcode"
+              label="Serial"
+              value={hookProps.state.meterData.serial}
+            />
+          <InfoRow
+              icon="clock-outline"
+              label="Thời gian"
+              value={
+                hookProps.state.currentTime
+                  ? hookProps.state.currentTime.toLocaleString("vi-VN", {
+                      hour12: false,
+                    })
+                  : ""
+              }
+            />
+            <InfoRow
+              icon="arrow-down-bold"
+              label="Chỉ số xuôi"
+              value={hookProps.state.meterData.impData}
+            />
+            <InfoRow
+              icon="arrow-up-bold"
+              label="Chỉ số ngược"
+              value={hookProps.state.meterData.expData}
+            />
+            <InfoRow
+              icon="battery"
+              label="Pin"
+              value={hookProps.state.meterData.batteryLevel}
+            />
+           <InfoRow
+              icon="calendar-clock"
+              label="Chu kỳ chốt"
+              value={`${hookProps.state.meterData.latchPeriod} phút`}
+            />
+          </View>
+        )}
 
-            <Text style={styles.sectionTitle}>📝 Sự kiện</Text>
+        {/* Sự kiện */}
+        {hookProps.state.meterData && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>
+              <Icon name="alert-circle-outline" size={16} color="#e67e22" /> Sự
+              kiện
+            </Text>
             {Array.isArray(hookProps.state.meterData.event) &&
             hookProps.state.meterData.event.length > 0 ? (
               hookProps.state.meterData.event.map((e: string, i: number) => (
-                <Text key={i} style={styles.eventItem}>
-                  • {e}
-                </Text>
+                <View key={i} style={styles.eventRow}>
+                  <Icon
+                    name="circle-medium"
+                    size={16}
+                    color="#e67e22"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.eventItem}>{e}</Text>
+                </View>
               ))
             ) : (
               <Text style={styles.eventItem}>Không có sự kiện</Text>
             )}
-          </>
+          </View>
         )}
 
-        {/* Hiển thị lịch sử nếu có */}
+        {/* Lịch sử */}
         {(hookProps.state.historyData?.dataRecords?.length ?? 0) > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>📂 90 bản ghi gần nhất</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>
+              <Icon name="history" size={16} color="#2980b9" />{' '}
+              {hookProps.state.historyData?.dataRecords?.length} bản ghi gần nhất
+            </Text>
             <FlatList
               data={hookProps.state.historyData?.dataRecords ?? []}
               keyExtractor={(_, idx) => idx.toString()}
@@ -119,21 +178,28 @@ export const RealDataMeterScreen = () => {
                   ]}
                 >
                   <Text style={styles.recordIndex}>{index + 1}</Text>
-                  <Text style={styles.recordDate}>{item.timestamp}</Text>
+                  <Text style={styles.recordDate}>
+                    {item.timestamp
+                      ? item.timestamp.toLocaleString("vi-VN", { hour12: false })
+                      : ""}
+                  </Text>
                   <Text style={styles.recordValue}>{item.value}</Text>
                 </View>
               )}
               scrollEnabled={false}
             />
-          </>
+          </View>
         )}
       </ScrollView>
 
-      {/* Nút đọc dữ liệu dưới cùng */}
+      {/* Button */}
       <View style={styles.btnBottom}>
         <Button
           style={styles.button}
-          label={hookProps.state.isDetailedRead ? '📖 Đọc chi tiết' : '📡 Đọc dữ liệu'}
+          label={
+            hookProps.state.isDetailedRead ? 'Đọc chi tiết' : 'Đọc dữ liệu'
+          }
+          icon="wifi"
           onPress={() => onReadData()}
         />
       </View>
@@ -141,9 +207,20 @@ export const RealDataMeterScreen = () => {
   );
 };
 
-const InfoRow = ({ label, value }: { label: string; value: any }) => (
+const InfoRow = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: any;
+}) => (
   <View style={styles.infoRow}>
-    <Text style={styles.infoLabel}>{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Icon name={icon} size={18} color="#2f4f9d" style={{ marginRight: 6 }} />
+      <Text style={styles.infoLabel}>{label}</Text>
+    </View>
     <Text style={styles.infoValue}>{value}</Text>
   </View>
 );
@@ -151,7 +228,7 @@ const InfoRow = ({ label, value }: { label: string; value: any }) => (
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: '#eef2f9',
   },
   container: {
     flex: 1,
@@ -169,17 +246,21 @@ const styles = StyleSheet.create({
     fontSize: CommonFontSize,
     borderColor: '#c3cde6',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
     backgroundColor: '#fff',
     marginRight: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#2f4f9d',
     backgroundColor: '#fff',
@@ -199,10 +280,20 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     color: '#2f4f9d',
   },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 0.5,
     borderColor: '#e0e6f5',
   },
@@ -215,16 +306,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
   },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   eventItem: {
     fontSize: normalize(13),
-    marginBottom: 2,
-    marginLeft: 4,
     color: '#333',
   },
   recordItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderBottomWidth: 0.5,
     borderColor: '#e0e6f5',
@@ -253,9 +347,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    width: '75%',
+    width: '80%',
     height: 50,
-    maxWidth: 350,
-    borderRadius: 10,
+    maxWidth: 360,
+    borderRadius: 12,
   },
 });

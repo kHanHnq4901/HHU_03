@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,22 +16,23 @@ import {
   PointAnnotation,
   ShapeSource,
   FillLayer,
+  LineLayer,
 } from '@track-asia/trackasia-react-native';
 import * as turf from '@turf/turf';
 import { LoadingOverlay } from '../../component/loading ';
-import { clearLocationWatch, requestLocationPermission, readMetersOnce, stopReading } from './handleButton';
+import { clearLocationWatch, requestLocationPermission, readMetersOnce, stopReading, getDirections, readOneMeter } from './handleButton';
 import { formatDistance, getDistanceValue } from '../../util/location';
 import { PulsingDot } from '../../component/PointAnnotation';
 import { BlinkingDot } from '../../component/blinkingDot';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export const ManualReadScreen = () => {
   // Khởi tạo hookProps
   GetHookProps();
-
+  const polyline = require('@trackasia/polyline');
   const mapRef = useRef<MapView>(null);
   const cameraRef = useRef<Camera>(null);
-
-  // Khi mount → request location + cleanup khi unmount
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   useEffect(() => {
     requestLocationPermission();
 
@@ -41,8 +42,9 @@ export const ManualReadScreen = () => {
       clearLocationWatch();
     };
   }, []);
-
-  // Lọc danh sách meter theo selectedStatus và sắp xếp theo khoảng cách
+  const decodePolyline = (encoded: string) => {
+    return polyline.decode(encoded).map(([lat, lng]) => [lng, lat]); // đảo lại
+  };
   useEffect(() => {
     if (hookProps.state.selectedStatus === null || !hookProps.state.currentLocation) return;
 
@@ -57,8 +59,6 @@ export const ManualReadScreen = () => {
         }),
     }));
   }, [hookProps.state.selectedStatus, hookProps.state.listMeter, hookProps.state.currentLocation]);
-
-  // Nếu chưa có vị trí hiện tại → hiển thị loading
   if (!hookProps.state.currentLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -67,8 +67,6 @@ export const ManualReadScreen = () => {
       </View>
     );
   }
-
-  // Hàm di chuyển camera tới meter
   const moveToMeter = (meter: any) => {
     if (!meter.COORDINATE) return;
     const [latStr, lonStr] = meter.COORDINATE.split(',').map((v: string) => v.trim());
@@ -97,9 +95,6 @@ export const ManualReadScreen = () => {
         visible={hookProps.state.isLoading}
         message={hookProps.state.textLoading}
       />
-
-
-      {/* Map */}
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -116,53 +111,58 @@ export const ManualReadScreen = () => {
           zoomLevel={Number(store.state.appSetting.setting.zoomLevel)}
           centerCoordinate={hookProps.state.currentLocation}
         />
-
-        {/* Marker vị trí hiện tại */}
+         {routeCoords.length > 0 && (
+          <ShapeSource
+            id="route"
+            shape={{
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: routeCoords,
+              },
+              properties: {},
+            }}
+          >
+            <LineLayer
+              id="routeLine"
+              style={{
+                lineColor: "#2196F3",
+                lineWidth: 4,
+              }}
+            />
+          </ShapeSource>
+        )}
         <PointAnnotation
           key="current-location"
           id="current-location"
           coordinate={hookProps.state.currentLocation}
-          title="Địa điểm của tôi"
-          snippet="Đây là vị trí hiện tại của bạn"
-          selected
           anchor={{ x: 0.5, y: 1 }}
         >
-          <View style={{ alignItems: "center", justifyContent: "center" }}>
-            <View
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: 7,
-                backgroundColor: "#2196f3",
-                borderWidth: 2,
-                borderColor: "#fff",
-              }}
-            />
-            
-          </View>
+          <MaterialCommunityIcons
+            name="map-marker"
+            size={40}
+            color="#d32f2f" // đỏ đặc trưng Google Maps
+            style={{ textShadowColor: "#000", textShadowRadius: 2 }}
+          />
         </PointAnnotation>
-
-        {/* Meter markers */}
         {hookProps.state.listMeter.map((meter, index) => {
           if (!meter.COORDINATE) return null;
           const [latStr, lonStr] = meter.COORDINATE.split(',').map(v => v.trim());
           const latitude = parseFloat(latStr);
           const longitude = parseFloat(lonStr);
           if (isNaN(latitude) || isNaN(longitude)) return null;
-
           let dotColor = '#9e9e9e';
-          let DotComponent = PulsingDot; // default
+          let DotComponent = PulsingDot;
           switch (Number(meter.STATUS)) {
             case 0: dotColor = '#9e9e9e'; break;
             case 1: dotColor = '#4caf50'; break;
             case 2: dotColor = '#f44336'; break;
             case 4: dotColor = '#ff9800'; break;
-            case 6: dotColor = '#00f'; DotComponent = BlinkingDot; break; // nhấp nháy màu xanh dương
+            case 6: dotColor = '#00f'; DotComponent = BlinkingDot; break;
           }
-
           return (
             <PointAnnotation
-              key={`${index}-${meter.STATUS}`} // React sẽ re-render khi STATUS thay đổi
+              key={`${index}-${meter.STATUS}`} 
               id={`${index}`}
               coordinate={[longitude, latitude]}
             >
@@ -170,8 +170,6 @@ export const ManualReadScreen = () => {
             </PointAnnotation>
           );
         })}
-
-        {/* Vòng tròn bán kính */}
         {hookProps.state.currentLocation && (
           <ShapeSource
             id="circle"
@@ -204,8 +202,6 @@ export const ManualReadScreen = () => {
           </Text>
         </View>
       )}
-
-      {/* Status Bar */}
       <View style={styles.statusBar}>
         {[
           { status: 2, label: 'Thất bại', color: '#f44336' },
@@ -227,60 +223,113 @@ export const ManualReadScreen = () => {
           </TouchableOpacity>
         ))}
       </View>
-
-
-      {/* Floating Button */}
       <TouchableOpacity
         style={[styles.floatingButton, { backgroundColor: '#4caf50' }]}
         onPress={readMetersOnce}
       >
         <Text style={styles.floatingButtonText}>Đọc</Text>
       </TouchableOpacity>
-
-      {/* Modal danh sách meter */}
       <Modal
         visible={hookProps.state.modalVisible}
         animationType="slide"
         onRequestClose={() => hookProps.setState(prev => ({ ...prev, modalVisible: false }))}
         transparent
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>
-              {hookProps.state.selectedStatus === 2 && 'Danh sách Thất bại'}
-              {hookProps.state.selectedStatus === 0 && 'Danh sách Chưa đọc'}
-              {hookProps.state.selectedStatus === 1 && 'Danh sách Đã đọc'}
-              {hookProps.state.selectedStatus === 4 && 'Danh sách Cảnh báo'}
-            </Text>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>
+            {hookProps.state.selectedStatus === 2 && 'Danh sách Thất bại'}
+            {hookProps.state.selectedStatus === 0 && 'Danh sách Chưa đọc'}
+            {hookProps.state.selectedStatus === 1 && 'Danh sách Đã đọc'}
+            {hookProps.state.selectedStatus === 4 && 'Danh sách Cảnh báo'}
+          </Text>
 
-            <FlatList
-              data={hookProps.state.filteredMeters || []} // Hiển thị filteredMeters theo status
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => moveToMeter(item)}>
-                  <View style={styles.meterItem}>
-                    <Text style={{ fontWeight: '600' }}>{item.LINE_NAME}</Text>
-                    <Text style={{ color: '#666' }}>
-                      {item.METER_NO} - {item.CUSTOMER_NAME} - {formatDistance(getDistanceValue(item.COORDINATE, hookProps.state.currentLocation))}
-                    </Text>
-                  </View>
+          <FlatList
+            data={hookProps.state.filteredMeters || []}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.meterItemRow}>
+                {/* Thông tin bên trái */}
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => moveToMeter(item)}
+                >
+                  <Text style={{ fontWeight: "600" }}>{item.LINE_NAME}</Text>
+                  <Text style={{ color: "#666", fontSize: 12 }}>
+                    {item.METER_NO} - {item.CUSTOMER_NAME} -{" "}
+                    {formatDistance(
+                      getDistanceValue(item.COORDINATE, hookProps.state.currentLocation)
+                    )}
+                  </Text>
                 </TouchableOpacity>
-              )}
-            />
+                <View style={styles.itemButtons}>
+                  <TouchableOpacity
+                    style={[styles.smallButton, { backgroundColor: "#2196F3" }]}
+                    onPress={async () => {
+                      const origin = `${hookProps.state.currentLocation[1]},${hookProps.state.currentLocation[0]}`; // lat,lng
+                      const destination = item.COORDINATE; // "lat,lng"
 
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => hookProps.setState(prev => ({ ...prev, modalVisible: false }))}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Đóng</Text>
-            </TouchableOpacity>
-          </View>
+                      const data = await getDirections(origin, destination, store.state.appSetting.setting.vehicle);
+                      if (data?.routes?.[0]?.overview_polyline?.points) {
+                        const coords = decodePolyline(data.routes[0].overview_polyline.points);
+                        setRouteCoords(coords);
+                        hookProps.setState(prev => ({ ...prev, modalVisible: false }));
+                        if (coords.length > 0) {
+                          cameraRef.current?.fitBounds(
+                            coords[0],
+                            coords[coords.length - 1],
+                            [50, 50, 50, 50]
+                          );
+                        }
+                      }
+                    }}
+                  >
+                    <MaterialCommunityIcons name="directions" size={18} color="#fff" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.smallButton, { backgroundColor: "#4CAF50" }]}
+                    onPress={async () => {
+                      hookProps.setState(prev => ({ ...prev, modalVisible: false }));
+                      console.log("📖 Đọc công tơ", item.METER_NO);
+                      await readOneMeter(item.METER_NO);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="access-point" size={18} color="#fff" />
+                  </TouchableOpacity>
+
+                  {/* Nút mới xem dữ liệu */}
+                  <TouchableOpacity
+                    style={[styles.smallButton, { backgroundColor: "#FF9800" }]}
+                    onPress={() => {
+                      console.log("👁️ Xem dữ liệu công tơ", item.METER_NO);
+                      hookProps.setState(prev => ({ 
+                        ...prev, 
+                        modalVisible: false, 
+                        selectedMeterNo: item.METER_NO, 
+                        isShowDataModal: true // ví dụ dùng để mở modal xem dữ liệu
+                      }));
+                    }}
+                  >
+                    <MaterialCommunityIcons name="file-document" size={18} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          />
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => hookProps.setState(prev => ({ ...prev, modalVisible: false }))}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Đóng</Text>
+          </TouchableOpacity>
         </View>
+      </View>
+
       </Modal>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   map: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
@@ -314,5 +363,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  modalActionButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+  modalActionText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  meterItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
+  itemButtons: {
+    flexDirection: "row",
+    marginLeft: 8,
+  },
+  smallButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 6,
+  },
+  smallButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  
 });

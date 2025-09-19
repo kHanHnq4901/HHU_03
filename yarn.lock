@@ -1985,6 +1985,11 @@
     "@turf/nearest-point-on-line" "^7.1.0"
     debounce "^2.2.0"
 
+"@trackasia/polyline@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@trackasia/polyline/-/polyline-1.1.0.tgz#801033224bca78cb1a58ed7847cc0dbf43c9046c"
+  integrity sha512-umMPn7Xg9cMSguaq2ew7qmc9CvLUA0s5Dq+8EI+gyurgrC3JbfVPjndJ6uilKTWS2p0Y8z0WebAdWABUvLX00w==
+
 "@turf/along@^7.2.0":
   version "7.2.0"
   resolved "https://registry.yarnpkg.com/@turf/along/-/along-7.2.0.tgz#de0369998c248fb867e567d524048e9c8170b52c"
@@ -6887,7 +6892,7 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==
 
-lodash@^4.17.19, lodash@^4.17.21:
+lodash@^4.17.13, lodash@^4.17.19, lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -7544,6 +7549,11 @@ path-type@^4.0.0:
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
+paths-js@^0.4.10:
+  version "0.4.11"
+  resolved "https://registry.yarnpkg.com/paths-js/-/paths-js-0.4.11.tgz#b2a9d5f94ee9949aa8fee945f78a12abff44599e"
+  integrity sha512-3mqcLomDBXOo7Fo+UlaenG6f71bk1ZezPQy2JCmYHy2W2k5VKpP+Jbin9H0bjXynelTbglCqdFhSEkeIkKTYUA==
+
 picocolors@^1.0.0, picocolors@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/picocolors/-/picocolors-1.1.1.tgz#3d321af3eab939b083c8f929a1d12cda81c26b6b"
@@ -7573,7 +7583,7 @@ point-in-polygon-hao@^1.1.0:
   dependencies:
     robust-predicates "^3.0.2"
 
-point-in-polygon@^1.1.0:
+point-in-polygon@^1.0.1, point-in-polygon@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/point-in-polygon/-/point-in-polygon-1.1.0.tgz#b0af2616c01bdee341cbf2894df643387ca03357"
   integrity sha512-3ojrFwjnnw8Q9242TzgXuTD+eKiutbzyslcq1ydfu82Db2y+Ogbmyrkpv0Hgj31qwT3lbS9+QAAO/pIQM35XRw==
@@ -7774,6 +7784,15 @@ react-native-ble-manager@^12.1.5:
   version "12.1.5"
   resolved "https://registry.yarnpkg.com/react-native-ble-manager/-/react-native-ble-manager-12.1.5.tgz#84d3a521c1e51eb0a30f1bbb0c00c3930b62b00a"
   integrity sha512-kTt2nYBnouyOyw9TN37dDuUAdhtcg1pduF+XSRCBXoBEWp6F5u4P16ISoo25rpc19R9dE2hSovoMSDwwwCaWsw==
+
+react-native-chart-kit@^6.12.0:
+  version "6.12.0"
+  resolved "https://registry.yarnpkg.com/react-native-chart-kit/-/react-native-chart-kit-6.12.0.tgz#187a4987a668a85b7e93588c248ed2c33b3a06f6"
+  integrity sha512-nZLGyCFzZ7zmX0KjYeeSV1HKuPhl1wOMlTAqa0JhlyW62qV/1ZPXHgT8o9s8mkFaGxdqbspOeuaa6I9jUQDgnA==
+  dependencies:
+    lodash "^4.17.13"
+    paths-js "^0.4.10"
+    point-in-polygon "^1.0.1"
 
 react-native-device-info@^14.0.4:
   version "14.0.4"
@@ -7982,6 +8001,11 @@ react-native-version-check@^3.5.0:
   dependencies:
     lodash "^4.17.21"
     semver "^6.1.1"
+
+react-native-vision-camera@^4.7.2:
+  version "4.7.2"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-4.7.2.tgz#e4bd8f3d893a3f5fa9d8224ce28b8ef00d171bc1"
+  integrity sha512-C+5PvlSunN6I4aYplSask+v3jfhgduZumIVw6H6lG+Afpf8boIcG3uFSsSfVgj+hxI7fx6qM6bsciEhzgxEUYg==
 
 react-native-webview@^13.14.0:
   version "13.14.0"

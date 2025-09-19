@@ -13,7 +13,7 @@ export type HookProps = {
 export let store = {} as PropsStore;
 export type PropDataMeter = {
   serial: string;
-  currentTime: string;
+  currentTime: Date | null ;
   impData: number;        
   expData: number;        
   event: string;
@@ -21,7 +21,7 @@ export type PropDataMeter = {
   latchPeriod: string;
   
   dataRecords: {
-    timestamp: string;  // thời gian (ISO hoặc HH:mm)
+    timestamp: Date | null ;  // thời gian (ISO hoặc HH:mm)
     value: number;      // chỉ số tương ứng
   }[];
 };

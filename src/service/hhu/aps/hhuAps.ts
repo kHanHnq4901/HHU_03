@@ -1,4 +1,5 @@
 import { crc16 } from "../../../util/crc16";
+import { int16_t } from "../define";
 import { CommandType, LoraCommandCode } from "../defineEM";
 
 const STX = 0x02;         
@@ -53,16 +54,20 @@ export const buildGetParamPacket = (
 
 export const buildSetParamPacket = (
   meterSerial: string,
-  params: string
+  params: { id: number; data: number[] }[]
 ): number[] => {
-  const paramBytes = stringToBytes(params);
+  // Payload: [LORA_CMD_SETTING, paramCount, ...allParams]
+  const payload: number[] = [];
+  payload.push(LoraCommandCode.LORA_CMD_SETTING);
+  payload.push(params.length); // số lượng params
 
-  const payload = [
-    LoraCommandCode.SETTING,
-    1,                 
-    paramBytes.length, 
-    ...paramBytes,
-  ];
+  // nối từng param vào payload
+  params.forEach((p) => {
+    payload.push(p.id);           // u8ParamId
+    payload.push(p.data.length);  // u8LenParam
+    payload.push(...p.data);      // pParamData
+  });
+  console.log (payload)
   return buildPacket(
     CommandType.LORA_SET_PARAM,
     payload,

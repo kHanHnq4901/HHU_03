@@ -110,7 +110,7 @@ export const checkTabelDBIfExist = async (): Promise<boolean> => {
 
 export const insertMeterData = async (data: {
   METER_NO: string;
-  TIMESTAMP: string;
+  TIMESTAMP: Date;
   IMPORT_DATA: string;
   EXPORT_DATA: string;
   EVENT: string;
@@ -147,7 +147,7 @@ export const insertMeterData = async (data: {
 
 
 export const insertMeterHistoryBatch = async (
-  records: { METER_NO: string; TIMESTAMP: string; DATA_RECORD: string }[]
+  records: { METER_NO: string; TIMESTAMP: Date; DATA_RECORD: string }[]
 ): Promise<void> => {
   try {
     if (records.length === 0) return;

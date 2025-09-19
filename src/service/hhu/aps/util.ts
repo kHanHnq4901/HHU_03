@@ -274,3 +274,29 @@ export const ConvertBufferToBCD = (
 
   return str;
 };
+export function parseDateBCD(bytes: number[]): Date | null {
+  if (bytes.length < 6) return null;
+
+  const year = 2000 + bcdToDec(bytes[0]);
+  const month = bcdToDec(bytes[1]) - 1; // JS month 0–11
+  const day = bcdToDec(bytes[2]);
+  const hour = bcdToDec(bytes[3]);
+  const minute = bcdToDec(bytes[4]);
+  const second = bcdToDec(bytes[5]);
+
+  // ✅ tạo Date theo local time
+  return new Date(year, month, day, hour, minute, second);
+}
+
+
+// 🆕 Hàm convert string dd/MM/yyyy HH:mm:ss → Date để tính toán
+export function parseStringToDate(str: string): Date | null {
+  const match = str.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const [, dd, MM, yyyy, hh, mm, ss] = match;
+  return new Date(Number(yyyy), Number(MM) - 1, Number(dd), Number(hh), Number(mm), Number(ss));
+}
+
+function bcdToDec(bcd: number): number {
+  return ((bcd >> 4) * 10) + (bcd & 0x0f);
+}

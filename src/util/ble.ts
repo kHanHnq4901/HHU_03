@@ -4,6 +4,7 @@ import { sleep } from '.';
 import { Buffer } from 'buffer'; // cần import Buffer
 import { connectLatestBLE, handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
 import { onBlePress } from '../screen/overview/handleButton';
+import { crc16 } from './crc16';
 const TAG = 'Ble.ts:';
 
 let service: string ;
@@ -137,8 +138,14 @@ export const checkPeripheralConnection = async (idPeripheral: string): Promise<b
 // 🟢 Hàm send mới gọn gàng hơn
 export const send = async (idPeripheral: string, data: number[]) => {
   try {
-    await BleManager.write(idPeripheral, service, characteristic, data);
-    console.log(TAG + 'Data sent:', data);
+    const START = 0xAA;
+    const COMMAND = 0x00;
+    const LENGTH = data.length;
+    const baseData = [START,COMMAND, LENGTH, ...data];
+    const buf = Buffer.from(baseData);
+    const crc = crc16(buf, buf.length);
+    const fullFrame = [...baseData,crc & 0xff,(crc >> 8) & 0xff];
+    await BleManager.write(idPeripheral, service, characteristic, fullFrame,256);
   } catch (err: any) {
     console.log(TAG + 'Error sending:', err);
   }
