@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { GetHookProps, hookProps } from "./controller";
 import { useNavigation } from "@react-navigation/native";
-import { LoadingOverlay } from "../../component/loading ";
+import { LoadingOverlay } from "../../component/loading";
 
 import { PieChart, BarChart } from "react-native-chart-kit";
 import LinearGradient from "react-native-linear-gradient";

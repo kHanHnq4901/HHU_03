@@ -14,7 +14,7 @@ import { readConfig, writeConfig } from './handleButton';
 import { hookProps, useHookProps } from './controller';
 
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { LoadingOverlay } from '../../component/loading ';
+import { LoadingOverlay } from '../../component/loading';
 
 export const ConfigMeterScreen = () => {
   useHookProps();

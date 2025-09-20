@@ -17,7 +17,8 @@ import { CommonHeight, normalize, CommonFontSize } from '../../theme';
 import { onReadData } from './handleButton';
 import { GetHookProps, hookProps } from './controller';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { LoadingOverlay } from '../../component/loading ';
+import { LoadingOverlay } from '../../component/loading';
+
 
 
 const inputAccessoryViewID = 'uniqueID';
@@ -133,8 +134,6 @@ export const RealDataMeterScreen = () => {
             />
           </View>
         )}
-
-        {/* Sự kiện */}
         {hookProps.state.meterData && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>
@@ -159,8 +158,6 @@ export const RealDataMeterScreen = () => {
             )}
           </View>
         )}
-
-        {/* Lịch sử */}
         {(hookProps.state.historyData?.dataRecords?.length ?? 0) > 0 && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>

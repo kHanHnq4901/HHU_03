@@ -18,7 +18,7 @@ import {
   FillLayer,
 } from '@track-asia/trackasia-react-native';
 import * as turf from '@turf/turf';
-import { LoadingOverlay } from '../../component/loading ';
+import { LoadingOverlay } from '../../component/loading';
 import { clearLocationWatch, requestLocationPermission, startAutoRead, stopAutoRead } from './handleButton';
 import { formatDistance, getDistanceValue } from '../../util/location';
 import { PulsingDot } from '../../component/PointAnnotation';

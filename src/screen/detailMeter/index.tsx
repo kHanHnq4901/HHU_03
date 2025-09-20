@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet, FlatList } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { hookProps, useHookProps } from "./controller";
-import { LoadingOverlay } from "../../component/loading ";
+import { LoadingOverlay } from "../../component/loading";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string | number }) => (

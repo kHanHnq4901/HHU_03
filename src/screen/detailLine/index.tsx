@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { hookProps, useHookProps } from "./controller";
-import { LoadingOverlay } from "../../component/loading ";
+import { LoadingOverlay } from "../../component/loading";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 export const DetailLineScreen = () => {

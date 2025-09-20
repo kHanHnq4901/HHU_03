@@ -24,7 +24,7 @@ import {
   getFilteredList,
   handleSaveDataToDB,
 } from './handleButton';
-import { LoadingOverlay } from '../../component/loading ';
+import { LoadingOverlay } from '../../component/loading';
 
 export const ImportMeterScreen = () => {
   GetHookProps();

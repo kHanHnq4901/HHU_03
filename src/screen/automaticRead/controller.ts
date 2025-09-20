@@ -21,7 +21,7 @@ export type PropDataMeter = {
   latchPeriod: string;
   
   dataRecords: {
-    timestamp: Date | null ;  // thời gian (ISO hoặc HH:mm)
+    timestamp: Date;  // thời gian (ISO hoặc HH:mm)
     value: number;      // chỉ số tương ứng
   }[];
 };
