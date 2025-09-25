@@ -16,11 +16,6 @@ import { showAlert, showToast } from '../../util';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StackRootParamsList } from '../../navigation/model/model';
 import RNAndroidLocationEnabler from 'react-native-android-location-enabler';
-import {
-  connectLatestBLE,
-  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
-  initModuleBle,
-} from '../../service/hhu/bleHhuFunc';
 import { ObjSend } from '../../service/hhu/hhuFunc';
 import { PropsLineModel, PropsMeterDataModel, PropsMeterModel, TABLE_NAME_INFO_LINE, TABLE_NAME_INFO_METER, TABLE_NAME_METER_DATA } from '../../database/entity';
 import { checkTabelDBIfExist, getDBConnection } from '../../database/repository';
@@ -187,7 +182,6 @@ const handleDidUpdateState = (obj: { state: any; }) => {
   // }
 };
 export const hhuHandleDisconnectedPeripheral = async (data: any) => {
-  console.log ('Đã tạo sự kiện mất kết nối')
   store.setState(state => {
     state.hhu.name = '';
     state.hhu.idConnected = '';
@@ -198,7 +192,7 @@ export const hhuHandleDisconnectedPeripheral = async (data: any) => {
   ObjSend.id = null;
   showToast('Thiết bị đã ngắt kết nối')
 };
-const handleDiscoverPeripheral = (peripheral: any) => {
+export const handleDiscoverPeripheral = (peripheral: any) => {
   const connectedId = store?.state.hhu.idConnected;
 
   // Tạo Map từ list hiện tại
@@ -236,8 +230,6 @@ const handleDiscoverPeripheral = (peripheral: any) => {
       state.ble.listNewDevice = Array.from(peripherals.values());
       return { ...state };
     });
-
-    console.log("Thiết bị mới:", res.name, res.id, res.rssi);
   }
 };
 

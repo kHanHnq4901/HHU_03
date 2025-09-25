@@ -47,7 +47,7 @@ export async function onBlePress() {
           text: 'Ngắt kết nối',
           onPress: async () => {
             try {
-              let peripheralId = ObjSend.id;
+              let peripheralId = store.state.hhu.idConnected;
   
               if (!peripheralId) {
                 let peripherals: any[] = [];

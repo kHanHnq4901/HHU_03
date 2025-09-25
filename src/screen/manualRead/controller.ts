@@ -42,6 +42,7 @@ export type HookState = {
   filteredMeters: PropsMeterModel[];
   selectedStatus?: number;
   modalVisible : boolean;
+  isShowDataModal : boolean;
   meterData: PropDataMeter | null; 
 };
 
@@ -57,6 +58,7 @@ export const GetHookProps = (): HookProps => {
     filteredMeters : [],
     selectedStatus: undefined,
     modalVisible : false,
+    isShowDataModal : false,
     meterData: null,
   });
 

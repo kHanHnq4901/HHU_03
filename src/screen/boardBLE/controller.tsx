@@ -5,7 +5,7 @@ import { ObjSend } from '../../service/hhu/hhuFunc';
 import { PropsStore, storeContext } from '../../store';
 
 export const variable = {
-  onOkChangeName: text => {},
+  onOkChangeName: (text: string) => {},
   onDismiss: () => {},
 };
 
@@ -17,6 +17,7 @@ export type HookState = {
   progressUpdate: number;
   showProgress: boolean;
   showModalSetName: boolean;
+  nameHHU : string;
 };
 
 export type HookProps = {
@@ -38,6 +39,7 @@ export const GetHookProps = (): HookProps => {
     progressUpdate: 0,
     showProgress: false,
     showModalSetName: false,
+    nameHHU : '',
   });
   hookProps.state = state;
   hookProps.setState = setState;

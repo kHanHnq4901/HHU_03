@@ -32,14 +32,11 @@ export const checkTabelDBIfExist = async (): Promise<boolean> => {
       }
       query += ')';
       await db.executeSql(query);
-      console.log(`✅ Table ${tableName} checked/created`);
-
       // Tạo index cho bảng
       for (const idx of indexes) {
         await db.executeSql(
           `CREATE INDEX IF NOT EXISTS idx_${tableName}_${idx} ON ${tableName} (${idx})`
         );
-        console.log(`🔎 Index idx_${tableName}_${idx} created`);
       }
     };
 

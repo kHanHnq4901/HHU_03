@@ -7,8 +7,8 @@ import { PropsMaCongToStorage } from '../storage/maCongTo';
 const api = '';
 
 export const endPoints = {
-  getVersionHU: '/HU_01/version.txt',
-  getFirmware: '/HU_01/firmware.txt',
+  getVersionHU: '/HU_03/version.txt',
+  getFirmware: '/HU_03/firmware.txt',
   getListChangeTypeMeter: '/300k.txt',
   getListMatchVersionTypeMeter: '/DVKH/METERLIST_HU01/listSeriVersion.txt',
   getVersionAppMobile: '/HU_01/AppMobile/version.txt',
@@ -18,8 +18,8 @@ export const endPoints = {
 
 export function getNsxUrl(endPoint: string): string {
   let url = '';
-  const host = store.state.appSetting.hhu.host.trim();
-  const port = store.state.appSetting.hhu.port.trim();
+  const host = '14.225.244.63';
+  const port = '5050';
   if (host.includes('http')) {
   } else {
     url += 'http://';
@@ -146,11 +146,11 @@ export const getVersion = async (): Promise<PropsReturnGetVerion> => {
     const url = getNsxUrl(endPoints.getVersionHU);
     const rest = await axios.get(url);
     const arr: string[] = rest?.data.split('_');
+    console.log(arr)
     if (arr.length < 2) {
       console.log('error arr');
       ret.message = 'Lỗi dữ liệu';
     } else {
-      console.log(arr);
       const strDate = getTimeFromString(arr[0]);
       const strVersion = arr[1];
       ret.bResult = true;
@@ -161,9 +161,6 @@ export const getVersion = async (): Promise<PropsReturnGetVerion> => {
           ? 'Bình thường'
           : 'Cao'
         : 'Bình thường';
-      //   console.log('date:', strDate);
-      //   console.log('version:', strVersion);
-      //status = 'Version: ' + strVersion + '. Ngày phát hành: ' + strDate;
     }
   } catch (err: any) {
     console.log(TAG, err);
@@ -172,6 +169,7 @@ export const getVersion = async (): Promise<PropsReturnGetVerion> => {
 
   return ret;
 };
+
 
 export const getStringFirmware = async (): Promise<PropsReturnGetFirmware> => {
   const ret: PropsReturnGetFirmware = {
@@ -182,9 +180,21 @@ export const getStringFirmware = async (): Promise<PropsReturnGetFirmware> => {
 
   try {
     const url = getNsxUrl(endPoints.getFirmware);
-    const { data }: { data: string } = await axios.get(url);
+
+    // lấy file dưới dạng binary
+    const response = await axios.get<ArrayBuffer>(url, {
+      responseType: "arraybuffer",
+    });
+
+    const buffer = new Uint8Array(response.data);
+
+    // chuyển sang chuỗi hex giống hex editor
+    const hexString = Array.from(buffer)
+      .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
+      .join("");
+
     ret.bResult = true;
-    ret.strFirmware = data;
+    ret.strFirmware = hexString;
   } catch (err: any) {
     ret.message = err.message;
   }

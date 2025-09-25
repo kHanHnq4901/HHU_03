@@ -17,7 +17,7 @@ import BleManager from 'react-native-ble-manager';
 
 import { responeData } from '../../screen/readDataMeter/handleButton';
 import { responeSetting } from '../../screen/configMeter/handleButton';
-const KEY_STORAGE = 'BLE_INFO';
+export const KEY_STORAGE = 'BLE_INFO';
 const TAG = 'Ble Func:';
 
 type PropsBleInfo = {
@@ -132,6 +132,31 @@ export const BleFunc_TryConnectToLatest = async (): Promise<{
   }
 };
 
+export const BleFunc_RemoveLatestPeripheral = async (): Promise<void> => {
+  try {
+    const resString = await AsyncStorage.getItem(KEY_STORAGE);
+    
+    if (!resString) {
+      console.log('⚠️ Không có thiết bị lưu trong storage');
+      return;
+    }
+
+    const data = JSON.parse(resString) as { id: string };
+    await BleManager.removePeripheral(data.id);
+    await BleManager.removeBond(data.id);
+    if (!data?.id) {
+      console.log('⚠️ Storage không có id thiết bị');
+      return;
+    }
+
+    console.log(`🗑️ Xóa peripheral id: ${data.id}`);
+
+    console.log('✅ Đã xóa peripheral khỏi cache');
+  } catch (err) {
+    console.log('❌ BleFunc_RemoveLatestPeripheral error:', err);
+  }
+};
+
 
 
 
@@ -242,47 +267,6 @@ function handleType2(payload: number[]) {
   console.log("🔹 Xử lý Type 2:", payload);
 }
 
-export const handleUpdateValueForCharacteristic = (data: { value: number[] }) => {
-  console.log('data update for characteristic:', data.value);
-  const buf = Buffer.from(data.value);
-
-  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x08) { // kiểm tra tối thiểu
-    console.log("✅ Header hợp lệ");
-
-    const moduleType = buf[1];
-    const commandType = buf[2];
-    const lenPayload = buf[3];
-    const meterSerialBytes = buf.slice(4, 14); // 10 byte meter serial
-    const meterSerial = meterSerialBytes.toString('ascii'); // nếu là string ASCII
-
-    const payloadStart = 14;
-    const payloadEnd = payloadStart + lenPayload;
-    const payload = Array.from(buf.slice(payloadStart, payloadEnd)); // chỉ lấy payload
-
-    console.log("📡 Meter Serial:", meterSerial);
-    console.log("📦 Payload:", payload);
-
-    switch (commandType) {
-      case 0x01:
-        responeData(payload, meterSerial);
-        break;
-      case 0x03:
-        responeSetting(payload);
-        break;
-      case 0x02:
-        handleType2(payload);
-        break;
-      default:
-        console.log("⚠️ Unknown type:", commandType, payload);
-    }
-
-    HhuObj.flag_rec = true;
-    HhuObj.identityFrame.bActive = false;
-  } else {
-    console.log("❌ Header không hợp lệ hoặc dữ liệu quá ngắn", buf[2]);
-    HhuObj.identityFrame.bActive = false;
-  }
-};
 
 
 

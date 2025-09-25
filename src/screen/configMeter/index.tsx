@@ -91,8 +91,6 @@ export const ConfigMeterScreen = () => {
             </View>
           )}
         </View>
-
-        {/* Khoảng giờ */}
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.labelRow}
@@ -193,8 +191,6 @@ export const ConfigMeterScreen = () => {
               </>
             )}
         </View>
-
-        {/* Ngày trong tháng */}
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.labelRow}
@@ -216,7 +212,6 @@ export const ConfigMeterScreen = () => {
             />
             <Text style={styles.label}>Số ngày/tháng (Tối đa 7)</Text>
           </TouchableOpacity>
-
           {hookProps.state.readDaysPerMonth &&
             hookProps.state.daysPerMonth.length > 0 && (
               <DropDownPicker
@@ -240,13 +235,14 @@ export const ConfigMeterScreen = () => {
                 }
                 multiple
                 mode="BADGE"
-                listMode="SCROLLVIEW"
+                listMode="MODAL"   // 👈 thay SCROLLVIEW bằng MODAL
                 max={7}
                 placeholder="Chọn ngày..."
                 badgeDotColors={['#007AFF']}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdown}
               />
+
             )}
         </View>
       </ScrollView>

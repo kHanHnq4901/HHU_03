@@ -25,10 +25,13 @@ export const onReadData = async () => {
     const isConnected = await checkPeripheralConnection(store.state.hhu.idConnected);
     if (!isConnected) return;
 
+    // 🚮 clear listener cũ
     if (hhuReceiveDataListener) {
       hhuReceiveDataListener.remove();
       hhuReceiveDataListener = null;
     }
+
+    // reset biến toàn cục
     dataQueue = [];
     globalHistoryRecords = [];
     globalLatchPeriodMinutes = 0;
@@ -43,12 +46,16 @@ export const onReadData = async () => {
       currentTime: new Date(),
     }));
 
-    let timeout: NodeJS.Timeout;
+    // timeout & retry
+    let timeoutMain: NodeJS.Timeout;
     let timeoutRetry: NodeJS.Timeout;
     let hasReceivedFirstPacket = false;
+    let retryCount = 0;
+    const MAX_RETRY = 3;
 
     const cleanup = () => {
-      if (timeout) clearTimeout(timeout);
+      if (timeoutMain) clearTimeout(timeoutMain);
+      if (timeoutRetry) clearTimeout(timeoutRetry);
       if (hhuReceiveDataListener) {
         hhuReceiveDataListener.remove();
         hhuReceiveDataListener = null;
@@ -56,45 +63,64 @@ export const onReadData = async () => {
       hookProps.setState((prev) => ({ ...prev, isReading: false }));
     };
 
-    const resetTimeout = () => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        console.warn("⏱️ Hết thời gian chờ phản hồi!");
-        cleanup();
-      }, 5000);
+    // ⏱ timeout chính (ngắt sau 6s)
+    timeoutMain = setTimeout(() => {
+      console.warn("⏱️ Hết thời gian chờ phản hồi!");
+      cleanup();
+    }, 3000);
+
+    // 📡 Listener BLE
+    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
+      (data: { value: number[] }) => {
+        if (!hasReceivedFirstPacket) {
+          hasReceivedFirstPacket = true;
+          if (timeoutRetry) clearTimeout(timeoutRetry); // dừng retry ngay
+        }
+        dataQueue.push(data);
+        processQueue().then(() => {
+          if (globalTotalPacket > 0 && receivedPacketCount >= globalTotalPacket) {
+            console.log("📦 Nhận đủ số gói:", receivedPacketCount, "/", globalTotalPacket);
+            cleanup();
+          }
+        });
+      }
+    );
+
+    const requestData = buildQueryDataPacket(
+      hookProps.state.serial,
+      hookProps.state.isDetailedRead
+    );
+
+    // 🔁 Hàm retry
+    const retrySend = async () => {
+      if (hasReceivedFirstPacket) return; // nếu đã nhận thì thôi
+      if (retryCount >= MAX_RETRY) return; // quá số lần retry
+
+      retryCount++;
+      console.warn(`⚠️ Retry lần ${retryCount}...`);
+
+      try {
+        await send(store.state.hhu.idConnected, requestData);
+      } catch (err) {
+        console.error("❌ Lỗi khi gửi retry:", err);
+      }
+
+      // tiếp tục retry nếu chưa nhận gói nào
+      if (!hasReceivedFirstPacket && retryCount < MAX_RETRY) {
+        timeoutRetry = setTimeout(retrySend, 2000);
+      }
     };
 
-    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic((data: { value: number[] }) => {
-      if (!hasReceivedFirstPacket) {
-        hasReceivedFirstPacket = true;
-        if (timeoutRetry) clearTimeout(timeoutRetry);
-      }
-      resetTimeout();
-      dataQueue.push(data);
-      processQueue().then(() => {
-        // ✅ Nếu nhận đủ số packet thì cleanup luôn
-        if (globalTotalPacket > 0 && receivedPacketCount >= globalTotalPacket) {
-          console.log("📦 Nhận đủ số gói:", receivedPacketCount, "/", globalTotalPacket);
-          cleanup();
-        }
-      });
-    });
+    // 🔥 Gửi lần đầu
+    try {
+      await send(store.state.hhu.idConnected, requestData);
+      console.log("🚀 Gửi lần đầu xong");
+    } catch (err) {
+      console.error("❌ Lỗi khi gửi lần đầu:", err);
+    }
 
-    const requestData = buildQueryDataPacket(hookProps.state.serial, hookProps.state.isDetailedRead);
-    await send(store.state.hhu.idConnected, requestData);
-
-    timeoutRetry = setTimeout(async () => {
-      if (!hasReceivedFirstPacket) {
-        console.warn("⚠️ Chưa nhận gói nào sau 2s, gửi lại lệnh...");
-        try {
-          await send(store.state.hhu.idConnected, requestData);
-        } catch (err) {
-          console.error("❌ Lỗi khi gửi lại lệnh:", err);
-        }
-      }
-    }, 2000);
-
-    resetTimeout();
+    // ⏳ Sau 2s nếu chưa nhận -> retry
+    timeoutRetry = setTimeout(retrySend, 2000);
   } catch (error) {
     console.error(error);
     hookProps.setState((prev) => ({ ...prev, isReading: false }));
@@ -104,6 +130,7 @@ export const onReadData = async () => {
     }
   }
 };
+
 
 
 const processQueue = async () => {

@@ -1,20 +1,22 @@
 import { checkUpdateHHU } from '../../service/api';
 import { BleFunc_SaveStorage, BleFunc_StartNotification } from '../../service/hhu/bleHhuFunc';
-import { ObjSend, readVersion } from '../../service/hhu/hhuFunc';
-import { requestBluetoothPermissions, requestPermissionScan } from '../../service/permission';
+import { ObjSend } from '../../service/hhu/hhuFunc';
+import { requestBluetoothPermissions } from '../../service/permission';
 import BleManager from 'react-native-ble-manager';
 import * as Ble from '../../util/ble';
 import { showAlert, sleep } from '../../util';
-import { hookProps, requestGps, setStatus, store } from './controller';
-import { Platform } from 'react-native';
+import { hookProps, setStatus, store } from './controller';
+import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
 const TAG = 'handleBtn Ble:';
+const bleManagerEmitter = new NativeEventEmitter(NativeModules.BleManager);
 
 export const connectHandle = async (id: string, name: string) => {
   try {
-    // Nếu đã kết nối rồi, ngắt kết nối cũ nếu khác id
+    // Ngắt kết nối cũ nếu khác id
     if (store?.state.hhu.connect === 'CONNECTED' && store?.state.hhu.idConnected !== id) {
       await BleManager.disconnect(store.state.hhu.idConnected, true);
+      await BleManager.removePeripheral(store.state.hhu.idConnected).catch(() => {});
     }
 
     if (name) {
@@ -25,14 +27,13 @@ export const connectHandle = async (id: string, name: string) => {
       });
     }
 
+    store?.setState(state => {
+      state.hhu.connect = 'CONNECTING';
+      return { ...state };
+    });
+
     let succeed = false;
     try {
-      store?.setState(state => {
-        state.hhu.connect = 'CONNECTING';
-        return { ...state };
-      });
-
-      // Thực hiện kết nối
       succeed = await Ble.connect(id);
     } catch (err: any) {
       store?.setState(state => {
@@ -41,18 +42,14 @@ export const connectHandle = async (id: string, name: string) => {
         return { ...state };
       });
       setStatus('Kết nối thất bại: ' + err.message);
-      return; // thoát nếu kết nối thất bại
+      return;
     }
 
     if (!succeed) {
       setStatus('Kết nối thất bại');
       return;
     }
-    // Xóa thiết bị vừa kết nối khỏi listNewDevice
-    hookProps.setState(state => {
-      state.ble.listNewDevice = state.ble.listNewDevice.filter(item => item.id !== id);
-      return { ...state };
-    });
+
     // Nếu kết nối thành công
     setStatus('Kết nối thành công');
     BleFunc_StartNotification(id);
@@ -64,116 +61,117 @@ export const connectHandle = async (id: string, name: string) => {
       return { ...state };
     });
 
+    // Lưu device
     BleFunc_SaveStorage(id);
 
-    // Bắt tay
-    ObjSend.id = id;
-    await sleep(500);
-    ObjSend.isShakeHanded = true;
-
-
-
-    // Đọc version HHU
-    for (let k = 0; k < 2; k++) {
-      await sleep(500);
-      const version = await readVersion();
-      if (version) {
-        const arr = version.split('.');
-        arr.length = 2;
-        const shortVersion = arr.join('.').toLowerCase().replace('v', '');
-        store.setState(state => {
-          state.hhu.version = version;
-          state.hhu.shortVersion = shortVersion;
-          return { ...state };
-        });
-        console.log('Read version succeed: ' + version);
-        console.log('Short version: ' + shortVersion);
-        checkUpdateHHU();
-        break;
-      } else {
-        console.log('Read version failed, try again');
-      }
-    }
+    // Xóa thiết bị vừa kết nối khỏi list scan
+    hookProps.setState(state => {
+      state.ble.listNewDevice = state.ble.listNewDevice.filter(item => item.id !== id);
+      return { ...state };
+    });
   } catch (err: any) {
     console.log(TAG, err);
     setStatus('Kết nối thất bại: ' + err.message);
   }
 };
 
-
-// Hàm scan
+// Hàm scan (ưu tiên lấy tên từ advertising.localName)
 export const onScanPress = async () => {
-  if (hookProps.state.ble.isScan) {
-    return;
-  }
+  if (hookProps.state.ble.isScan) return;
 
   hookProps.setState(state => {
-    state.status = ''; // Không xóa listNewDevice nữa
+    state.status = '';
     return { ...state };
   });
 
   const requestScanPermission = await requestBluetoothPermissions();
 
   try {
-    if (requestScanPermission) {
-      console.log('here request');
-
-      try {
-        await BleManager.enableBluetooth();
-
-        if (Platform.OS === 'android') {
-          await BleManager.start({ showAlert: false });
-          console.log("BLE Module initialized");
-        }
-
-        // Bắt đầu quét
-        BleManager.scan([], 5, true).then(() => {
-          console.log("Scan started");
-          hookProps.setState(state => {
-            state.ble.isScan = true;
-            return { ...state };
-          });
-
-          // Sau 5s thì dừng quét
-          setTimeout(() => {
-            BleManager.stopScan().then(() => {
-              console.log("Scan stopped");
-              hookProps.setState(state => {
-                state.ble.isScan = false;
-                return { ...state };
-              });
-            });
-          }, 5000);
-        });
-
-      } catch (err) {
-        showAlert('Thiết bị cần được bật Bluetooth');
-        return;
-      }
-
-    } else {
-      console.log('requestGps failed');
+    if (!requestScanPermission) {
+      console.log('⚠️ requestGps failed');
+      return;
     }
+
+    await BleManager.enableBluetooth();
+
+    if (Platform.OS === 'android') {
+      await BleManager.start({ showAlert: false });
+      console.log("BLE Module initialized");
+    }
+
+    // Xóa list device trước khi scan
+    hookProps.setState(state => {
+      state.ble.listNewDevice = [];
+      return { ...state };
+    });
+
+    // Listener phát hiện thiết bị
+    const discoverListener = bleManagerEmitter.addListener(
+      "BleManagerDiscoverPeripheral",
+      (peripheral) => {
+        const advName = peripheral?.advertising?.localName;
+        const deviceName = advName || peripheral.name || "Unknown";
+
+        console.log("📡 Found device:", { id: peripheral.id, name: deviceName });
+
+        hookProps.setState(state => {
+          const exists = state.ble.listNewDevice.some(d => d.id === peripheral.id);
+          if (!exists) {
+            state.ble.listNewDevice.push({
+              id: peripheral.id, name: deviceName,
+              rssi: 0
+            });
+          }
+          return { ...state };
+        });
+      }
+    );
+
+    // Bắt đầu quét
+    await sleep(500); // delay để tránh lấy tên cũ
+    BleManager.scan([], 5, true).then(() => {
+      console.log("🔍 Scan started");
+      hookProps.setState(state => {
+        state.ble.isScan = true;
+        return { ...state };
+      });
+
+      setTimeout(async () => {
+        await BleManager.stopScan();
+        console.log("🛑 Scan stopped");
+        hookProps.setState(state => {
+          state.ble.isScan = false;
+          return { ...state };
+        });
+        discoverListener.remove();
+      }, 5000);
+    });
   } catch (err: any) {
     console.log(TAG, 'err:', err);
+    showAlert("Thiết bị cần được bật Bluetooth");
   }
 };
 
-
-
 export const disConnect = async (id: string) => {
   try {
-    console.log('data disconnect peripheral:', id);
+    console.log('🔌 Disconnect peripheral:', id);
     await BleManager.disconnect(id, true);
+
+    // Xóa cache sau khi disconnect
+    await BleManager.removePeripheral(id).catch(() => {});
+    if (Platform.OS === 'android') {
+      await BleManager.removeBond(id).catch(() => {});
+    }
+
     store.setState(state => {
       state.hhu.name = '';
       state.hhu.idConnected = '';
       state.hhu.connect = 'DISCONNECTED';
       return { ...state };
     });
-    console.log (store.state.hhu.connect)
+
     ObjSend.id = null;
-  } catch {}
+  } catch (err) {
+    console.log("⚠️ disconnect error:", err);
+  }
 };
-
-

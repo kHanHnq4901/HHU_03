@@ -116,10 +116,10 @@ export const StatisticsScreen = () => {
             <Text style={styles.expandedTitle}>📊 Chi tiết</Text>
             <BarChart
               data={{
-                labels: ["Chưa", "OK", "Lỗi", "Ghi tay", "B.thường"],
+                labels: ["Chưa", "Thành công", "Thất bại ", "Ghi tay", "B.thường"],
                 datasets: [{ data: [chuaDoc, thanhCong, loi, ghiTay, batThuong] }],
               }}
-              width={320}
+              width={700}
               height={180}
               chartConfig={{
                 backgroundColor: "#fff",
@@ -198,7 +198,7 @@ export const StatisticsScreen = () => {
             onPress={() => setSortBy(sortBy === "error" ? null : "error")}
           >
             <Ionicons name="alert-circle" size={16} color="#fff" />
-            <Text style={styles.sortText}>Lỗi</Text>
+            <Text style={styles.sortText}>Thất bại </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -208,7 +208,7 @@ export const StatisticsScreen = () => {
         <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.kpiCard}>
           <Ionicons name="speedometer" size={26} color="#fff" />
           <Text style={styles.kpiValue}>{globalStats.total}</Text>
-          <Text style={styles.kpiLabel}>Tổng Meter</Text>
+          <Text style={styles.kpiLabel}>Tổng đồng hồ</Text>
         </LinearGradient>
         <LinearGradient colors={["#11998e", "#38ef7d"]} style={styles.kpiCard}>
           <Ionicons name="checkmark-circle" size={26} color="#fff" />
@@ -218,7 +218,7 @@ export const StatisticsScreen = () => {
         <LinearGradient colors={["#ff416c", "#ff4b2b"]} style={styles.kpiCard}>
           <Ionicons name="alert-circle" size={26} color="#fff" />
           <Text style={styles.kpiValue}>{globalStats[2]}</Text>
-          <Text style={styles.kpiLabel}>Lỗi</Text>
+          <Text style={styles.kpiLabel}>Thất bại </Text>
         </LinearGradient>
       </View>
 
@@ -228,11 +228,11 @@ export const StatisticsScreen = () => {
         data={[
           { name: "Chưa đọc", population: globalStats[0], color: "#555", legendFontColor: "#333", legendFontSize: 12 },
           { name: "Thành công", population: globalStats[1], color: "#2e7d32", legendFontColor: "#333", legendFontSize: 12 },
-          { name: "Lỗi", population: globalStats[2], color: "#d32f2f", legendFontColor: "#333", legendFontSize: 12 },
+          { name: "Thất bại ", population: globalStats[2], color: "#d32f2f", legendFontColor: "#333", legendFontSize: 12 },
           { name: "Ghi tay", population: globalStats[3], color: "#f57c00", legendFontColor: "#333", legendFontSize: 12 },
           { name: "Bất thường", population: globalStats[4], color: "#8e24aa", legendFontColor: "#333", legendFontSize: 12 },
         ]}
-        width={350}
+        width={500}
         height={200}
         chartConfig={{ color: () => "#333" }}
         accessor="population"

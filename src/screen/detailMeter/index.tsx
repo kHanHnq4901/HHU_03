@@ -65,7 +65,7 @@ export const DetailMeterScreen = () => {
           {topRecords.length > 0 ? (
             <>
               <Text style={styles.sectionTitle}>
-                📂 {topRecords.length} bản ghi gần nhất
+                📂 Bản ghi gần nhất
               </Text>
               <FlatList
                 data={topRecords}

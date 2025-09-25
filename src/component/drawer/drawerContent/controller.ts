@@ -17,7 +17,6 @@ import { onReceiveSharingIntent } from '../../../service/event';
 import { UPDATE_FW_HHU } from '../../../service/event/constant';
 import {
   connectLatestBLE,
-  handleUpdateValueForCharacteristic as hhuHandleReceiveData,
   initModuleBle,
 } from '../../../service/hhu/bleHhuFunc';
 import { InitSTARMeter, ObjSend } from '../../../service/hhu/hhuFunc';
@@ -80,12 +79,6 @@ export const onInit = async (navigation: any) => {
   if (!hhuDiscoverPeripheral) {
     hhuDiscoverPeripheral = BleManager.onDiscoverPeripheral(
       handleDiscoverPeripheral
-    );
-  }
-
-  if (!hhuReceiveDataListener) {
-    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
-      hhuHandleReceiveData
     );
   }
 

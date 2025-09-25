@@ -169,26 +169,6 @@ export const SystemSettingScreen = () => {
               </View>
             </View>
           </View>
-
-          {/* Preview */}
-          <View style={[styles.group, { borderColor: '#6e83e4' }]}>
-            <View style={styles.groupHeader}>
-              <Icon name="eye-outline" size={18} color="#6e83e4" />
-              <Text style={styles.groupTitle}>Xem trước cài đặt</Text>
-            </View>
-            <Text style={{ color: Colors.text, fontSize: 14 }}>
-              📏 Khoảng cách: {setting.distance || '--'} m³
-            </Text>
-            <Text style={{ color: Colors.text, fontSize: 14 }}>
-              🚙 Phương tiện: {setting.vehicle || '--'}
-            </Text>
-            <Text style={{ color: Colors.text, fontSize: 14 }}>
-              🔍 Zoom: {setting.zoomLevel || '--'}
-            </Text>
-            <Text style={{ color: Colors.text, fontSize: 14 }}>
-              ⚠️ Ngưỡng: {setting.lowerThresholdValue || '--'} - {setting.upperThresholdValue || '--'} m³
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 

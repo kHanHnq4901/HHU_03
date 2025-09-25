@@ -109,3 +109,88 @@ export const buildLoraWakeUpPacket = (meterSerial: string): number[] => {
     stringToBytes(meterSerial)
   );
 };
+
+export enum HuCommandCode {
+  CMD_APP_TRANSMIT_DEVICE_DATA_LORA = 0x00,
+  CMD_APP_TRANSMIT_DEVICE_DATA_OPTICAL = 0x01,
+  CMD_APP_CHANGE_NAME_BLE = 0x02,
+  CMD_APP_GET_VERSION_FIRMWARE = 0x03,
+  CMD_APP_UPDATE_FIRMWARE = 0x04,
+}
+export enum BootloaderCommandCode {
+  FOTA_CMD_START_UPDATE = 0x10,
+  FOTA_CMD_RECV_FW = 0x11,
+  FOTA_CMD_CHECK_CRC_FW = 0x12,
+  FOTA_CMD_VERSION_FW = 0x13
+}
+
+export const buildCmdHuPacket = (commandCode: HuCommandCode, payload: number[] = [] ): number[] => {
+  const START_BYTE = 0xaa;
+
+  const length = payload.length; // độ dài payload
+
+  // Data để tính CRC: Command + Length + Payload
+  const dataForCrc = [START_BYTE,commandCode, length, ...payload];
+  const crc = crc16(new Buffer(dataForCrc),dataForCrc.length);
+  // Build final packet
+  return [
+    START_BYTE,
+    commandCode,
+    length,
+    ...payload,
+    crc & 0xff,        // CRC Low
+    (crc >> 8) & 0xff, // CRC High
+  ];
+};
+
+export const buildCmdBootloaderPacket = (
+  commandCode: BootloaderCommandCode,
+  payload: number[] = []
+): number[] => {
+  const START_BYTE = 0xaa;
+
+  // đảm bảo payload đủ 4 byte
+  const fixedPayload = [...payload];
+  while (fixedPayload.length < 4) {
+    fixedPayload.push(0x00);
+  }
+
+  const length = fixedPayload.length; // lúc nào cũng = 4
+
+  const dataForCrc = [START_BYTE, commandCode, length, ...fixedPayload];
+  const crc = crc16(Buffer.from(dataForCrc), dataForCrc.length);
+
+  return [
+    START_BYTE,
+    commandCode,
+    length,
+    ...fixedPayload,
+    crc & 0xff,        // CRC Low
+    (crc >> 8) & 0xff, // CRC High
+  ];
+};
+
+
+export const buildCmdRecvFwBootloaderPacket = (commandCode: BootloaderCommandCode, payload: number[] = [] ): number[] => {
+  const START_BYTE = 0xaa;
+  const length = payload.length; // uint16
+
+  // Tách length thành 2 byte
+  const lengthLow = length & 0xff;
+  const lengthHigh = (length >> 8) & 0xff;
+
+  // Data để tính CRC: START + CMD + LengthLow + LengthHigh + Payload
+  const dataForCrc = [START_BYTE, commandCode, lengthLow, lengthHigh, ...payload];
+  const crc = crc16(Buffer.from(dataForCrc), dataForCrc.length);
+
+  // Build final packet
+  return [
+    START_BYTE,
+    commandCode,
+    lengthLow,
+    lengthHigh,
+    ...payload,
+    crc & 0xff,        // CRC Low
+    (crc >> 8) & 0xff, // CRC High
+  ];
+};

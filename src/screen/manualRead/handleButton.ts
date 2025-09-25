@@ -1,14 +1,15 @@
-import { hookProps, store } from './controller';
+import { PropDataMeter, hookProps, store } from './controller';
 import { Alert, EventSubscription, PermissionsAndroid, Platform } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { getDistanceValue } from '../../util/location';
 import { buildQueryDataPacket } from '../../service/hhu/aps/hhuAps';
 import { checkPeripheralConnection, send } from '../../util/ble';
 import { parseDate, parseUint16, parseUint32 } from '../../util';
-import { changeMeterStatus, insertMeterData, insertMeterHistoryBatch } from '../../database/repository';
+import { changeMeterStatus, checkTabelDBIfExist, getDBConnection, insertMeterData, insertMeterHistoryBatch } from '../../database/repository';
 import BleManager from 'react-native-ble-manager';
 import axios from 'axios';
 import { parseDateBCD } from '../../service/hhu/aps/util';
+import { PropsHistoryMeterDataModel, PropsMeterDataModel, TABLE_NAME_METER_DATA, TABLE_NAME_METER_HISTORY } from '../../database/entity';
 let hhuReceiveDataListener: EventSubscription | null = null;
 // ✅ Xin quyền vị trí
 let watchId: number | null = null;
@@ -172,6 +173,21 @@ export const readMetersOnce = async () => {
 
 
 export const readOneMeter = async (meterNo: string) => {
+  const db = await getDBConnection();
+  if (!db) return;
+
+  await checkTabelDBIfExist();
+
+  // 🔑 Xóa dữ liệu theo meterNo
+  await db.executeSql(
+    `DELETE FROM ${TABLE_NAME_METER_DATA} WHERE METER_NO = ?`,
+    [meterNo]
+  );
+
+  await db.executeSql(
+    `DELETE FROM ${TABLE_NAME_METER_HISTORY} WHERE METER_NO = ?`,
+    [meterNo]
+  );
   shouldStopReading = false;
 
   const isConnected = await checkPeripheralConnection(store.state.hhu.idConnected);
@@ -489,4 +505,77 @@ export const getDirections = async (
     console.error("❌ Lỗi khi gọi Directions API:", error);
     return null;
   }
+};
+export const fetchData = async (meterNo: string, hookProps: any) => {
+  try {
+    hookProps.setState((prev: any) => ({
+      ...prev,
+      isLoading: true,
+      textLoading: "Đang tải dữ liệu...",
+    }));
+
+    const db = await getDBConnection();
+    if (!db) return;
+
+    await checkTabelDBIfExist();
+
+    // 🔥 Query METER_DATA (1 bản ghi mới nhất)
+    const dataResults = await db.executeSql(
+      `SELECT * FROM ${TABLE_NAME_METER_DATA} WHERE METER_NO = ? ORDER BY TIMESTAMP DESC LIMIT 1`,
+      [meterNo]
+    );
+
+    // 🔥 Query HISTORY
+    const historyResults = await db.executeSql(
+      `SELECT * FROM ${TABLE_NAME_METER_HISTORY} WHERE METER_NO = ? ORDER BY TIMESTAMP DESC`,
+      [meterNo]
+    );
+
+    const dataRaw = dataResults[0].rows.raw();
+    const historyRaw = historyResults[0].rows.raw();
+
+    let meterData: PropDataMeter | null = null;
+
+    if (dataRaw.length > 0) {
+      const d = dataRaw[0];
+
+      meterData = {
+        serial: d.METER_NO,
+        currentTime: d.TIMESTAMP ? new Date(d.TIMESTAMP) : null,
+        impData: d.IMPORT_DATA ?? 0,
+        expData: d.EXPORT_DATA ?? 0,
+        event: d.EVENT ?? "",
+        batteryLevel: d.BATTERY ?? "",
+        latchPeriod: d.PERIOD ?? "",
+        dataRecords: historyRaw.map((h: any) => ({
+          timestamp: h.TIMESTAMP ? new Date(h.TIMESTAMP) : new Date(),
+          value: h.DATA_RECORD ?? 0,
+        })),
+      };
+    }
+
+    hookProps.setState((prev: any) => ({
+      ...prev,
+      meterData,
+      historyData: historyRaw, // vẫn giữ historyRaw nếu cần riêng
+      isLoading: false,
+      textLoading: "",
+    }));
+  } catch (error) {
+    console.error("❌ Lỗi khi load dữ liệu:", error);
+    Alert.alert("Lỗi", "Không thể tải dữ liệu từ database.");
+    hookProps.setState((prev: any) => ({
+      ...prev,
+      isLoading: false,
+      textLoading: "",
+    }));
+  }
+};
+export const onClose = () => {
+  hookProps.setState((prev: any) => ({
+    ...prev,
+    isShowDataModal: false,
+    meterData: null,
+    historyData: null,
+  }));
 };

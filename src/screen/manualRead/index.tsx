@@ -8,6 +8,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { GetHookProps, hookProps, store } from './controller';
 import {
@@ -20,7 +21,7 @@ import {
 } from '@track-asia/trackasia-react-native';
 import * as turf from '@turf/turf';
 import { LoadingOverlay } from '../../component/loading';
-import { clearLocationWatch, requestLocationPermission, readMetersOnce, stopReading, getDirections, readOneMeter } from './handleButton';
+import { clearLocationWatch, requestLocationPermission, readMetersOnce, stopReading, getDirections, readOneMeter, fetchData, onClose } from './handleButton';
 import { formatDistance, getDistanceValue } from '../../util/location';
 import { PulsingDot } from '../../component/PointAnnotation';
 import { BlinkingDot } from '../../component/blinkingDot';
@@ -307,8 +308,11 @@ export const ManualReadScreen = () => {
                         ...prev, 
                         modalVisible: false, 
                         selectedMeterNo: item.METER_NO, 
-                        isShowDataModal: true // ví dụ dùng để mở modal xem dữ liệu
+                        isShowDataModal: true
                       }));
+                  
+                      // 🔥 Gọi hàm fetchData khi mở modal
+                      fetchData(item.METER_NO, hookProps);
                     }}
                   >
                     <MaterialCommunityIcons name="file-document" size={18} color="#fff" />
@@ -327,6 +331,158 @@ export const ManualReadScreen = () => {
       </View>
 
       </Modal>
+      <Modal
+      visible={hookProps.state.isShowDataModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          {/* Loading */}
+          {hookProps.state.isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color="#2196F3" />
+              <Text style={styles.loadingText}>
+                {hookProps.state.textLoading}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={hookProps.state.meterData?.dataRecords || []}
+              keyExtractor={(_, index) => index.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.historyItem}>
+                  <MaterialCommunityIcons
+                    name="clock-outline"
+                    size={18}
+                    color="#2196F3"
+                  />
+                  <Text style={{ marginLeft: 6, flex: 1 }}>
+                    {item.timestamp
+                      ? item.timestamp.toLocaleString("vi-VN", { hour12: false })
+                      : ""}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="chart-line"
+                    size={18}
+                    color="#4CAF50"
+                  />
+                  <Text style={{ marginLeft: 6 }}>
+                    Sản lượng: {item.value}
+                  </Text>
+                </View>
+              )}
+              ListEmptyComponent={<Text>Không có dữ liệu lịch sử.</Text>}
+              ListHeaderComponent={
+                <>
+                  {/* Header */}
+                  <View style={styles.header}>
+                    <Text style={styles.title}>Dữ liệu đồng hồ</Text>
+                    <TouchableOpacity onPress={onClose}>
+                      <MaterialCommunityIcons
+                        name="close"
+                        size={24}
+                        color="#333"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Dữ liệu hiện tại */}
+                  {hookProps.state.meterData ? (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Thông tin hiện tại</Text>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="identifier"
+                          size={20}
+                          color="#FF9800"
+                        />
+                        <Text style={styles.rowText}>
+                          Serial: {hookProps.state.meterData.serial}
+                        </Text>
+                      </View>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="calendar-clock"
+                          size={20}
+                          color="#2196F3"
+                        />
+                        <Text style={styles.rowText}>
+                          Thời gian:{" "}
+                          {hookProps.state.meterData.currentTime
+                            ? hookProps.state.meterData.currentTime.toLocaleString(
+                                "vi-VN",
+                                { hour12: false }
+                              )
+                            : "N/A"}
+                        </Text>
+                      </View>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="arrow-down-bold"
+                          size={20}
+                          color="#4CAF50"
+                        />
+                        <Text style={styles.rowText}>
+                          Chỉ số xuôi: {hookProps.state.meterData.impData}
+                        </Text>
+                      </View>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="arrow-up-bold"
+                          size={20}
+                          color="#F44336"
+                        />
+                        <Text style={styles.rowText}>
+                          Chỉ số ngược: {hookProps.state.meterData.expData}
+                        </Text>
+                      </View>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="alert-circle-outline"
+                          size={20}
+                          color="#9C27B0"
+                        />
+                        <Text style={styles.rowText}>
+                          Sự kiện: {hookProps.state.meterData.event}
+                        </Text>
+                      </View>
+
+                      <View style={styles.row}>
+                        <MaterialCommunityIcons
+                          name="battery"
+                          size={20}
+                          color="#607D8B"
+                        />
+                        <Text style={styles.rowText}>
+                          Battery: {hookProps.state.meterData.batteryLevel}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text>Không có dữ liệu hiện tại.</Text>
+                  )}
+
+                  {/* Lịch sử */}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Lịch sử</Text>
+                  </View>
+                </>
+              }
+              style={{ maxHeight: 600 }}
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
+
+
     </View>
   );
 };
@@ -404,5 +560,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
-  
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  container: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: "85%",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  loadingBox: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#555",
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  historyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#ccc",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  rowText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: "#333",
+  },
 });

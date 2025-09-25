@@ -2,7 +2,6 @@ import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
 import { Buffer } from 'buffer'; // cần import Buffer
-import { connectLatestBLE, handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
 import { onBlePress } from '../screen/overview/handleButton';
 import { crc16 } from './crc16';
 const TAG = 'Ble.ts:';
@@ -150,7 +149,13 @@ export const send = async (idPeripheral: string, data: number[]) => {
     console.log(TAG + 'Error sending:', err);
   }
 };
-
+export const sendHHU = async (idPeripheral: string, data: number[]) => {
+  try {
+    await BleManager.write(idPeripheral, service, characteristic, data,256);
+  } catch (err: any) {
+    console.log(TAG + 'Error sending:', err);
+  }
+};
 function toHexString(byteArray: number[]) {
   return byteArray
     .map(b => b.toString(16).padStart(2, '0')) // Chuyển sang hex, thêm 0 nếu 1 ký tự

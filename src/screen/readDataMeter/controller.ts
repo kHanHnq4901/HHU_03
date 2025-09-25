@@ -43,7 +43,7 @@ export let store = {} as PropsStore;
 
 export const GetHookProps = (): HookProps => {
   const [state, setState] = useState<HookState>({
-    serial: "1234567890",
+    serial: "",
     currentTime : null,
     isDetailedRead: false,
     meterData: null,

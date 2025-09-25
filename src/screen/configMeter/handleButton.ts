@@ -52,10 +52,10 @@ export const readConfig = async () => {
     }
 
     const data = buildGetParamPacket(hookProps.state.serial, command);
-    console.log('📤 Data gửi:', data);
+
 
     await send(store.state.hhu.idConnected, data);
-
+    console.log('📤 Data gửi:', data);
     let timeout: NodeJS.Timeout;
 
     // Hàm reset timeout mỗi khi có gói tin mới
@@ -349,7 +349,7 @@ export const writeConfig = async () => {
     hasConfigResponse = false; // reset cờ mỗi lần gửi mới
 
     console.log("📤 Gửi packet gộp:", packet);
-    await send(store.state.hhu.idConnected, packet);
+
 
     if (hhuReceiveDataListener) {
       hhuReceiveDataListener.remove();
@@ -358,6 +358,7 @@ export const writeConfig = async () => {
     hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic((data: { value: number[] }) => {
       hhuResponeConfig(data);
     });
+    await send(store.state.hhu.idConnected, packet);
     if (configTimeout) clearTimeout(configTimeout);
     configTimeout = setTimeout(() => {
       if (!hasConfigResponse) { // ✅ chỉ xử lý khi chưa có phản hồi

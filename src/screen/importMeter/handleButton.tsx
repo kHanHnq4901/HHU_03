@@ -7,7 +7,6 @@ import {
 } from '../../service/hhu/hhuFunc';
 import { hookProps, store } from './controller';
 
-import { FillFlash, SendFlashPage } from '../../service/boardRF/bootloader';
 import { GetLineAccount, GetMeterAccount, GetMeterByLine, SaveMeterDataToDB } from '../../service/api/serverData';
 import { Alert } from 'react-native';
 import { checkTabelDBIfExist, getDBConnection } from '../../database/repository';

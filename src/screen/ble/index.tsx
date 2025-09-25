@@ -26,7 +26,6 @@ import {
 } from './controller';
 import { connectHandle, disConnect, onScanPress } from './handleButton';
 import { StackRootParamsList } from '../../navigation/model/model';
-
 // component hiển thị từng thiết bị
 const BleItem = (props: PropsItemBle & { statusLabel?: string }) => {
   const isConnected = props.id === store?.state.hhu.idConnected;
@@ -99,6 +98,7 @@ export const SetUpBleScreen = () => {
 
   useEffect(() => {
     onInit(navigation);
+
     onScanPress();
     return () => onDeInit();
   }, []);

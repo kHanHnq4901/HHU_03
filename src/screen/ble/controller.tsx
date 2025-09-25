@@ -145,7 +145,6 @@ const handleDidUpdateState = (obj: { state: any; }) => {
   // }
 };
 export const hhuHandleDisconnectedPeripheral = async (data: any) => {
-  console.log ('Đã tạo sự kiện mất kết nối')
   store.setState(state => {
     state.hhu.name = '';
     state.hhu.idConnected = '';
@@ -194,8 +193,6 @@ const handleDiscoverPeripheral = (peripheral: any) => {
       state.ble.listNewDevice = Array.from(peripherals.values());
       return { ...state };
     });
-
-    console.log("Thiết bị mới:", res.name, res.id, res.rssi);
   }
 };
 

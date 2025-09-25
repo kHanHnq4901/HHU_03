@@ -2,7 +2,6 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { sleep } from '.';
 import { Buffer } from 'buffer'; // cần import Buffer
-import { handleUpdateValueForCharacteristic } from '../service/hhu/bleHhuFunc';
 import { crc16 } from '../../util/crc16';
 const TAG = 'Ble.ts:';
 

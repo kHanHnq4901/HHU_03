@@ -14,7 +14,7 @@ import Theme, {
 import * as controller from './controller';
 import { GetHookProps, hookProps, store, variable } from './controller';
 import * as handleBtn from './handleButton';
-import { onUpdateFirmWareContainer } from './handleButton';
+
 
 import { ModalGetText } from '../../component/modal/modalGetText';
 
@@ -29,19 +29,10 @@ export const BoardBLEScreen = () => {
 
   useEffect(() => {
     controller.onInit();
-    // navigation.addListener('focus', () => {
-    //   console.log('focus');
-    // });
     return controller.onDeInit;
   }, []);
 
-  useEffect(() => {
-    console.log('route');
-    if (route.params?.isUpdate === true) {
-      console.log('update from HHU request');
-      onUpdateFirmWareContainer(false);
-    }
-  }, [route.params?.isUpdate]);
+
 
   const version =
     controller.store?.state.hhu.version?.length === 0
@@ -63,12 +54,6 @@ export const BoardBLEScreen = () => {
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.btnArea}>
-          <Button
-            label="Reset thiết bị"
-            style={styles.btn}
-            textStyle={styles.textbtn}
-            onPress={throttle(handleBtn.onResetBoardBtnPress, 3000)}
-          />
           <Button
             label="Đọc version"
             style={styles.btn}
@@ -92,24 +77,19 @@ export const BoardBLEScreen = () => {
             style={styles.btn}
             textStyle={styles.textbtn}
             //style={{ ...styles.btn, backgroundColor: Colors.secondary }}
-            onPress={throttle(handleBtn.onUpdateFirmWareContainer, 2000)}
+            onPress={throttle(handleBtn.ondUpdateFirmwareBtnPress, 2000)}
           />
-          <Button
-              label="Đổi tên thiết bị"
-              style={styles.btn}
-              textStyle={styles.textbtn}
-              //style={{ ...styles.btn, backgroundColor: Colors.secondary }}
-              onPress={throttle(handleBtn.onChangeNamePress, 2000)}
-            />
-          {(store?.state.userRole === 'admin' || store?.state.userRole === 'sx') && (
-            <Button
-              label="Đổi tên thiết bị"
-              style={styles.btn}
-              textStyle={styles.textbtn}
-              //style={{ ...styles.btn, backgroundColor: Colors.secondary }}
-              onPress={throttle(handleBtn.onChangeNamePress, 2000)}
-            />
-          )}
+         <Button
+          label="Đổi tên thiết bị"
+          style={styles.btn}
+          textStyle={styles.textbtn}
+          onPress={() => {
+            hookProps.setState(state => {
+              state.showModalSetName = true;
+              return { ...state };
+            });
+          }}
+        />
         </View>
         <View
           style={{
@@ -134,12 +114,6 @@ export const BoardBLEScreen = () => {
               //style={{ margin: 5, padding: 5 }}
             />
           )}
-          {/* <Progress.Pie progress={0.4} size={sizeChartPie} /> */}
-
-          {/* <Progress.Bar progress={0.3} width={200} />
-        <Progress.Pie progress={0.4} size={50} />
-        <Progress.Circle size={30} indeterminate={true} />
-        <Progress.CircleSnail color={['red', 'green', 'blue']} /> */}
         </View>
       </ScrollView>
     </View>

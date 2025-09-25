@@ -48,3 +48,4 @@ export function crc16(buf: Buffer, len: uint16_t) {
   }
   return crc;
 }
+

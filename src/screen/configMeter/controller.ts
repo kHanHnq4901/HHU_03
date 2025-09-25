@@ -30,7 +30,7 @@ type PropsHook = {
 // ---- Custom hook ----fv
   export const useHookProps = (): PropsHook => {
     const [state, setState] = useState<PropsState>({
-      serial: "1234567890",
+      serial: "",
       cycle: "",
       isReading: false,
       textLoading: "Đang đọc cấu hình",
