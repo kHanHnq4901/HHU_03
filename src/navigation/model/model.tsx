@@ -66,4 +66,5 @@ export type DrawerParamsList = {
   ReadDataMeter : ParamsDrawerProps;
   DetailLine : ParamsDrawerProps;
   DetailMeter : ParamsDrawerProps;
+  OpticalWrite : ParamsDrawerProps;
 };

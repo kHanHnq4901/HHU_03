@@ -17,6 +17,7 @@ import { ImportMeterScreen } from '../screen/importMeter';
 import { RealDataMeterScreen } from '../screen/readDataMeter';
 import { DetailLineScreen } from '../screen/detailLine';
 import { DetailMeterScreen } from '../screen/detailMeter';
+import { OpticalWriteScreen } from '../screen/opticalwrite';
 
 export const version = VersionCheck.getCurrentVersion();
 
@@ -116,6 +117,13 @@ export const screenDatas: DataScreensProps = [
     id: 'ReadDataMeter',
     icon: 'chart-bar',
     component: RealDataMeterScreen,
+  },
+  {
+    title: 'Đọc dữ liệu cổng quang',
+    info: 'Lấy danh sách đồng hồ',
+    id: 'OpticalWrite',
+    icon: 'chart-bar',
+    component: OpticalWriteScreen,
   },
   {
     title: 'Lấy danh sách đồng hồ',

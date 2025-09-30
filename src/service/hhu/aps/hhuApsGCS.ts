@@ -70,7 +70,7 @@ export const apsReadRfGCS = async (propsGCS: Props) => {
     ?.value as unknown as number;
   if (!valueMeterSpecies) {
     response.bSucceed = false;
-    response.strMessage = 'Chưa hỗ trợ công tơ này';
+    response.strMessage = 'Chưa hỗ trợ đồng hồ này';
     return response;
   }
   const typeMeter: uint8_t =

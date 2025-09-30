@@ -1,12 +1,14 @@
-import { PermissionsAndroid, Platform } from 'react-native';
+import { EventSubscription, PermissionsAndroid, Platform } from 'react-native';
 import BleManager from 'react-native-ble-manager';
-import { sleep } from '.';
+
 import { Buffer } from 'buffer'; // cần import Buffer
 import { crc16 } from '../../util/crc16';
+import { sleep } from '../../util';
 const TAG = 'Ble.ts:';
 
 let service: string ;
 let characteristic: string;
+let hhuReceiveDataListener: EventSubscription | null = null;
 
 export const requestBlePermission = async (): Promise<boolean> => {
   if (Platform.OS === 'android' && Platform.Version >= 23) {
@@ -30,6 +32,24 @@ export const requestBlePermission = async (): Promise<boolean> => {
     } catch {}
   }
   return Promise.resolve(true);
+};
+
+
+
+
+export const addBleListener = (callback: (data: { value: number[] }) => void) => {
+  if (hhuReceiveDataListener) {
+    hhuReceiveDataListener.remove();
+    hhuReceiveDataListener = null;
+  }
+  hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(callback);
+};
+
+export const removeBleListener = () => {
+  if (hhuReceiveDataListener) {
+    hhuReceiveDataListener.remove();
+    hhuReceiveDataListener = null;
+  }
 };
 
 export const connect = async (id: string): Promise<boolean> => {

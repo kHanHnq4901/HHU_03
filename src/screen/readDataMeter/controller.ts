@@ -50,7 +50,7 @@ export const GetHookProps = (): HookProps => {
     historyData: null, // ✅ thêm state cho history
     isLoading: false,
     isReading: false,
-    textLoading: "Đang đọc dữ liệu...",
+    textLoading: "Đang đọc dữ liệu",
   });
 
   store = useContext(storeContext) as PropsStore;

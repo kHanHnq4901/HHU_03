@@ -87,7 +87,7 @@ export async function UpdateMaCongToObjFromStorageAndServer(): Promise<PropsMaCo
     if (maCongToObjStorage.version !== maCongToFromServer.version) {
       console.log('Update Ma cong to from server');
 
-      showSnack('Đã cập nhật mã công tơ mới');
+      showSnack('Đã cập nhật mã đồng hồ mới');
 
       saveMaCongToStorage(maCongToFromServer);
       maCongToObjStorage = { ...maCongToFromServer };

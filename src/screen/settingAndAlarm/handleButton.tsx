@@ -84,11 +84,11 @@ export const onLowerThresholdDoneSubmit = (text: string) => {
       if (state.appSetting.setting.typeAlarm === 'Value') {
         state.appSetting.setting.lowerThresholdValue = (
           uppervalue - 1 > 0 ? uppervalue - 1 : 0
-        ).toString();
+        );
       } else {
         state.appSetting.setting.lowerThresholdPercent = (
           uppervalue - 1 > 0 ? uppervalue - 1 : 0
-        ).toString();
+        );
       }
       return { ...state };
     });
@@ -123,11 +123,11 @@ export const onUpperThresholdDoneSubmit = (text: string) => {
       if (state.appSetting.setting.typeAlarm === 'Value') {
         state.appSetting.setting.upperThresholdValue = (
           lowerValue + 1
-        ).toString();
+        );
       } else {
         state.appSetting.setting.upperThresholdPercent = (
           lowerValue + 1
-        ).toString();
+        );
       }
       return { ...state };
     });

@@ -39,6 +39,7 @@ export const OverViewScreen = () => {
     { label: "Cấu hình module", icon: "tune", subtitle: "", screen: "ConfigMeter", colors: ["#03A9F4", "#4FC3F7"] },
     { label: "Đọc dữ liệu", icon: "database-search", subtitle: "Xem dữ liệu thô", screen: "ReadDataMeter", colors: ["#607D8B", "#90A4AE"] },
     { label: "Hướng dẫn", icon: "book-open-page-variant", subtitle: "Xem cách sử dụng", isGuide: true, colors: ["#00BCD4", "#80DEEA"] },
+    { label: "Ghi cổng quang", icon: "usb-port", subtitle: "Kết nối qua optical port", screen: "OpticalWrite", colors: ["#009688", "#4DB6AC"] },
     { label: "Đăng xuất", icon: "logout", subtitle: "Thoát hệ thống", screen: "Login", isLogout: true, colors: ["#FF5722", "#FF8A65"] },
     { label: "Thoát", icon: "exit-to-app", subtitle: "Đóng ứng dụng", isExit: true, colors: ["#795548", "#A1887F"] },
   ];

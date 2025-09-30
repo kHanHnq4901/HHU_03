@@ -269,17 +269,6 @@ export async function hhuFunc_wait(timeout: number): Promise<PropsResponse> {
     BufferToString(response.obj.payload, 0, hhuHeader.u16Length, 16, true),
   );
 
-  // switch (hhuHeader.u8Cmd) {
-  //   case TYPE_HHU_CMD.DATA:
-  //     //
-  //     break;
-  //   case TYPE_HHU_CMD.DATA:
-  //     //
-  //     break;
-  //   default:
-  //     console.error('No type cmd in header hhu receive');
-  //     return false;
-  // }
 
   response.bSucceed = true;
   return response;

@@ -116,6 +116,36 @@ export const SystemSettingScreen = () => {
                 />
               </View>
             </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Số lần đọc lại</Text>
+              <View style={styles.inputWrapper}>
+                <Icon
+                  name="repeat"
+                  size={18}
+                  color="#6e83e4"
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  keyboardType="numeric"
+                  value={String(setting.retryCount ?? "")} // đảm bảo hiển thị string
+                  style={styles.textInput}
+                  placeholder="Nhập số lần đọc lại"
+                  onChangeText={(text) => {
+                    const retry = Number(text); // convert về number
+                    store.setState((prev) => ({
+                      ...prev,
+                      appSetting: {
+                        ...prev.appSetting,
+                        setting: {
+                          ...prev.appSetting.setting,
+                          retryCount: isNaN(retry) ? 0 : retry, // tránh NaN
+                        },
+                      },
+                    }));
+                  }}
+                />
+              </View>
+            </View>
           </View>
 
           {/* Ngưỡng cảnh báo */}
@@ -128,18 +158,27 @@ export const SystemSettingScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Ngưỡng thấp (m³)</Text>
               <View style={styles.inputWrapper}>
-                <Icon name="arrow-collapse-down" size={18} color="#f57c00" style={styles.inputIcon} />
+                <Icon
+                  name="arrow-collapse-down"
+                  size={18}
+                  color="#f57c00"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   keyboardType="numeric"
-                  value={setting.lowerThresholdValue}
+                  value={String(setting.lowerThresholdValue ?? "")} // ép thành string để hiển thị
                   style={styles.textInput}
                   placeholder="Nhập giá trị thấp"
                   onChangeText={(text) => {
+                    const val = Number(text);
                     store.setState((prev) => ({
                       ...prev,
                       appSetting: {
                         ...prev.appSetting,
-                        setting: { ...prev.appSetting.setting, lowerThresholdValue: text },
+                        setting: {
+                          ...prev.appSetting.setting,
+                          lowerThresholdValue: isNaN(val) ? 0 : val,
+                        },
                       },
                     }));
                   }}
@@ -150,18 +189,27 @@ export const SystemSettingScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Ngưỡng cao (m³)</Text>
               <View style={styles.inputWrapper}>
-                <Icon name="arrow-collapse-up" size={18} color="#d32f2f" style={styles.inputIcon} />
+                <Icon
+                  name="arrow-collapse-up"
+                  size={18}
+                  color="#d32f2f"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   keyboardType="numeric"
-                  value={setting.upperThresholdValue}
+                  value={String(setting.upperThresholdValue ?? "")} // ép string
                   style={styles.textInput}
                   placeholder="Nhập giá trị cao"
                   onChangeText={(text) => {
+                    const val = Number(text);
                     store.setState((prev) => ({
                       ...prev,
                       appSetting: {
                         ...prev.appSetting,
-                        setting: { ...prev.appSetting.setting, upperThresholdValue: text },
+                        setting: {
+                          ...prev.appSetting.setting,
+                          upperThresholdValue: isNaN(val) ? 0 : val,
+                        },
                       },
                     }));
                   }}

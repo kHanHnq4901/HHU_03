@@ -14,19 +14,6 @@ export async function onSavePress() {
 
   showToast('Đã lưu');
 }
-// export function onDropdownSelected(newLanguage: string) {
-//   // const currentLanguage = store.state.appSetting.currentLanguage;
-//   store.setState(state => {
-//     state.appSetting.currentLanguage =
-//       newLanguage as unknown as SUPPORT_LANGUAGE_LABEL_TYPE;
-//     return { ...state };
-//   });
-//   // if(currentLanguage !== newLanguage)
-//   // {
-//   //   changeLanguage();
-//   // }
-// }
-
 export function getDefaultIPPort(): {
   host: string;
   port: string;

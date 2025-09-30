@@ -274,9 +274,7 @@ export const ConvertBufferToBCD = (
 
   return str;
 };
-export function parseDateBCD(bytes: number[]): Date | null {
-  if (bytes.length < 6) return null;
-
+export function parseDateBCD(bytes: number[]): Date {
   const year = 2000 + bcdToDec(bytes[0]);
   const month = bcdToDec(bytes[1]) - 1; // JS month 0–11
   const day = bcdToDec(bytes[2]);

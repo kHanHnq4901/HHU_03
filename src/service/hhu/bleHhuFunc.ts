@@ -12,7 +12,6 @@ import {
 import { PropsStore } from '../../store';
 import { checkUpdateHHU } from '../api';
 import { Platform } from 'react-native';
-import { bleManagerEmitter } from '../../screen/ble/controller';
 import BleManager from 'react-native-ble-manager';
 
 import { responeData } from '../../screen/readDataMeter/handleButton';
@@ -159,8 +158,6 @@ export const BleFunc_RemoveLatestPeripheral = async (): Promise<void> => {
 
 
 
-
-
 export async function initModuleBle() {
   await BleManager.start({ showAlert: false });
 }
@@ -260,12 +257,6 @@ export const connectLatestBLE = async (store: PropsStore) => {
   }
 };
 
-
-
-
-function handleType2(payload: number[]) {
-  console.log("🔹 Xử lý Type 2:", payload);
-}
 
 
 

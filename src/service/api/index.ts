@@ -1,11 +1,9 @@
 import axios from 'axios';
-import { store } from '../../component/drawer/drawerContent/controller';
 import { showAlert } from '../../util';
 import { ObjSend, onOKAlertNeedUpdatePress } from '../hhu/hhuFunc';
 import { PropsMaCongToStorage } from '../storage/maCongTo';
-
+import { store } from '../../screen/overview/controller';
 const api = '';
-
 export const endPoints = {
   getVersionHU: '/HU_03/version.txt',
   getFirmware: '/HU_03/firmware.txt',
@@ -18,8 +16,8 @@ export const endPoints = {
 
 export function getNsxUrl(endPoint: string): string {
   let url = '';
-  const host = '14.225.244.63';
-  const port = '5050';
+  const host = store.state.appSetting.hhu.host;
+  const port = store.state.appSetting.hhu.port;
   if (host.includes('http')) {
   } else {
     url += 'http://';
@@ -358,7 +356,7 @@ export const GetMaCongToFromServer = async (): Promise<PropsCommonResponse> => {
       ret.bSucceed = true;
       ret.obj = objMaCongTo as PropsMaCongToStorage;
     } catch (err: any) {
-      let strErorr = 'Cú pháp khai báo mã công tơ chưa đúng. Kiểm tra lại ...';
+      let strErorr = 'Cú pháp khai báo mã đồng hồ chưa đúng. Kiểm tra lại ...';
       showAlert(strErorr);
       ret.strMessage = strErorr;
     }

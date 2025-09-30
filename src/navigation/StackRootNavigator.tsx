@@ -62,7 +62,7 @@ export function StackRootNavigator() {
           component={SettingIPPortScreen}
           options={{
             headerShown: true,
-            title: 'Cấu hình địa chỉ IP',
+            title: 'Cài đặt địa chỉ IP',
             headerTitleStyle: { fontFamily: Fonts },
             headerStyle: { height: 56 },
           }}

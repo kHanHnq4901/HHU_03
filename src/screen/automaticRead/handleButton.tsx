@@ -158,7 +158,7 @@ export const startAutoRead = async () => {
       );
 
     if (metersToRead.length === 0) {
-      console.log("✅ Không còn công tơ nào cần đọc, chờ 3s rồi thử lại...");
+      console.log("✅ Không còn đồng hồ nào cần đọc, chờ 3s rồi thử lại...");
       await new Promise(res => setTimeout(res, 3000));
       continue;
     }
@@ -227,7 +227,7 @@ export const startAutoRead = async () => {
         }));
         changeMeterStatus(meter.METER_NO, "6");
 
-        const dataPacket = buildQueryDataPacket(meter.METER_NO);
+        const dataPacket = buildQueryDataPacket(meter.METER_NO,1);
         send(store.state.hhu.idConnected, dataPacket).catch(err => {
           console.error("❌ Gửi dữ liệu thất bại:", err);
           cleanup();

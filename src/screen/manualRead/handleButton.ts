@@ -287,7 +287,7 @@ export const readOneMeter = async (meterNo: string) => {
       }
     });
 
-    const dataPacket = buildQueryDataPacket(meter.METER_NO);
+    const dataPacket = buildQueryDataPacket(meter.METER_NO,1);
     send(store.state.hhu.idConnected, dataPacket).catch(err => {
       console.error("❌ Gửi dữ liệu thất bại:", err);
       cleanup();
@@ -345,8 +345,6 @@ export async function responeData(payload: number[], meterSerial: string): Promi
   let impData = 0, expData = 0;
   let event = "", batteryLevel = "";
   let totalPacket = 0;
-
-  // Lưu mốc thời gian của bản ghi mới nhất
   let lastRecordTime: Date | null = null;
 
   // Gói đầu tiên
@@ -459,10 +457,6 @@ export async function responeData(payload: number[], meterSerial: string): Promi
   console.log(`📥 Đã nhận gói ${indexPacket}/${totalPacket}`);
   return true;
 }
-
-
-
-
 
 
 const API_KEY = "f4a6c08959b47211756357354b1b73ac74"; // 👈 key của bạn

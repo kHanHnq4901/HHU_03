@@ -87,7 +87,7 @@ export async function UpdateDbMatchSeriVersionFromString(str: string) {
       await saveVersionUpdateFileMatchSeriVersion(version);
     }
 
-    showToast('Đang cập nhật lại version công tơ ...');
+    showToast('Đang cập nhật lại version đồng hồ ...');
 
     const dlmsv1 = 'DLMSV1:';
     const dlmsv2 = 'DLMSV2:';
@@ -118,7 +118,7 @@ export async function UpdateDbMatchSeriVersionFromString(str: string) {
     await UpdateDataSeriVersionToLocaleVariable();
     await UpdateVersionToCurrentDb();
 
-    showToast('Cập nhật xong version công tơ');
+    showToast('Cập nhật xong version đồng hồ');
   } catch (err: any) {
     showAlert(err.message);
   }
@@ -140,7 +140,7 @@ export async function UpdateDataSeriVersionToLocaleVariable(): Promise<boolean> 
 
 export async function UpdateVersionToCurrentDb() {
   try {
-    showToast('Đang kiểm tra version công tơ...');
+    showToast('Đang kiểm tra version đồng hồ...');
 
     const KHCMISEntity = await InfoMeterRepository.findAll();
 
@@ -184,7 +184,7 @@ export async function UpdateVersionToCurrentDb() {
       }
     }
 
-    showToast('Thay đổi version ' + countEffetc + ' công tơ');
+    showToast('Thay đổi version ' + countEffetc + ' đồng hồ');
   } catch (err: any) {
     showAlert('Lỗi: ' + err.message);
   }

@@ -148,12 +148,15 @@ export const ManualReadScreen = () => {
         </PointAnnotation>
         {hookProps.state.listMeter.map((meter, index) => {
           if (!meter.COORDINATE) return null;
+
           const [latStr, lonStr] = meter.COORDINATE.split(',').map(v => v.trim());
           const latitude = parseFloat(latStr);
           const longitude = parseFloat(lonStr);
           if (isNaN(latitude) || isNaN(longitude)) return null;
+
           let dotColor = '#9e9e9e';
           let DotComponent = PulsingDot;
+
           switch (Number(meter.STATUS)) {
             case 0: dotColor = '#9e9e9e'; break;
             case 1: dotColor = '#4caf50'; break;
@@ -161,13 +164,24 @@ export const ManualReadScreen = () => {
             case 4: dotColor = '#ff9800'; break;
             case 6: dotColor = '#00f'; DotComponent = BlinkingDot; break;
           }
+
           return (
             <PointAnnotation
               key={`${index}-${meter.STATUS}`} 
               id={`${index}`}
               coordinate={[longitude, latitude]}
+              onSelected={(e) => {
+                console.log("👉 Selected meter:", meter.METER_NO);
+                hookProps.setState(prev => ({ 
+                  ...prev, 
+                  modalVisible: false, 
+                  selectedMeterNo: meter.METER_NO, 
+                  isShowDataModal: true
+                }));
+                fetchData(meter.METER_NO, hookProps);
+              }}
             >
-              <PulsingDot color={dotColor} />
+              <DotComponent color={dotColor} />
             </PointAnnotation>
           );
         })}
@@ -292,7 +306,7 @@ export const ManualReadScreen = () => {
                     style={[styles.smallButton, { backgroundColor: "#4CAF50" }]}
                     onPress={async () => {
                       hookProps.setState(prev => ({ ...prev, modalVisible: false }));
-                      console.log("📖 Đọc công tơ", item.METER_NO);
+                      console.log("📖 Đọc đồng hồ", item.METER_NO);
                       await readOneMeter(item.METER_NO);
                     }}
                   >
@@ -303,7 +317,7 @@ export const ManualReadScreen = () => {
                   <TouchableOpacity
                     style={[styles.smallButton, { backgroundColor: "#FF9800" }]}
                     onPress={() => {
-                      console.log("👁️ Xem dữ liệu công tơ", item.METER_NO);
+                      console.log("👁️ Xem dữ liệu đồng hồ", item.METER_NO);
                       hookProps.setState(prev => ({ 
                         ...prev, 
                         modalVisible: false, 

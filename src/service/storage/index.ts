@@ -12,10 +12,11 @@ export type PropsSettingAndAlarm = {
   zoomLevel: string;
   vehicle : "driving" | "walking" | "motorcycling" | "truck";
   typeAlarm: 'Value' | 'Percent';
-  upperThresholdPercent: string;
-  lowerThresholdPercent: string;
-  upperThresholdValue: string;
-  lowerThresholdValue: string;
+  upperThresholdPercent: number;
+  lowerThresholdPercent: number;
+  upperThresholdValue: number;
+  lowerThresholdValue: number;
+  retryCount : number;
 };
 
 export type PropsAppSetting = {
@@ -44,10 +45,11 @@ export const getDefaultStorageValue = (): PropsAppSetting => ({
     zoomLevel: '15',
     vehicle : 'motorcycling',
     typeAlarm: 'Value',
-    upperThresholdPercent: '500',
-    lowerThresholdPercent: '0',
-    upperThresholdValue: '500',
-    lowerThresholdValue: '0',
+    upperThresholdPercent: 500,
+    lowerThresholdPercent: 0,
+    upperThresholdValue: 500,
+    lowerThresholdValue: 0,
+    retryCount : 1,
   },
   numRetriesRead: '1',
   CMISPath: '',

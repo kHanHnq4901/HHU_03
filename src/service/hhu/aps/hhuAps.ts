@@ -77,6 +77,7 @@ export const buildSetParamPacket = (
 
 export const buildQueryDataPacket = (
   meterSerial: string,
+  packet : number,
   isDetailedRead?: boolean
 ): number[] => {
   // ✅ Thêm 1 byte biểu diễn trạng thái isDetailedRead
@@ -84,7 +85,7 @@ export const buildQueryDataPacket = (
 
   const payload = [
     detailedReadByte, // ✅ byte mới
-    LoraCommandCode.LORA_CMD_QUERY_DATA_DETAIL,
+    packet,
   ];
   return buildPacket(
     CommandType.LORA_QUERY_DATA,

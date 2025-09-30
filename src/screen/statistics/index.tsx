@@ -128,8 +128,7 @@ export const StatisticsScreen = () => {
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(44,62,80,${opacity})`,
               }}
-              style={{ borderRadius: 12, marginTop: 10 }}
-            />
+              style={{ borderRadius: 12, marginTop: 10 }} yAxisLabel={""} yAxisSuffix={""}            />
             <TouchableOpacity
               style={styles.detailBtn}
               onPress={() => navigation.navigate("DetailLine", { line: item })}
@@ -168,14 +167,14 @@ export const StatisticsScreen = () => {
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>📊 Dashboard Thống kê</Text>
+          <Text style={styles.headerTitle}>📊 Thống kê</Text>
           <TouchableOpacity style={styles.refreshBtn}>
             <Ionicons name="refresh" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
         <TextInput
           style={styles.searchInput}
-          placeholder="🔍 Tìm kiếm line..."
+          placeholder="🔍 Tìm kiếm trạm ..."
           value={search}
           onChangeText={setSearch}
         />
@@ -242,7 +241,7 @@ export const StatisticsScreen = () => {
       />
 
       {/* List */}
-      <Text style={styles.chartTitle}>📋 Danh sách Line</Text>
+      <Text style={styles.chartTitle}>📋 Danh sách trạm</Text>
       <FlatList
         data={filteredList}
         keyExtractor={(item) => item.LINE_ID}

@@ -19,8 +19,6 @@ import { GetHookProps, hookProps } from './controller';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LoadingOverlay } from '../../component/loading';
 
-
-
 const inputAccessoryViewID = 'uniqueID';
 
 export const RealDataMeterScreen = () => {
@@ -54,7 +52,7 @@ export const RealDataMeterScreen = () => {
         {/* Serial input + Toggle */}
         <View style={styles.serialRow}>
           <TextInput
-            placeholder="Nhập serial công tơ"
+            placeholder="Nhập serial đồng hồ"
             value={hookProps.state.serial}
             style={styles.textInput}
             placeholderTextColor="#888"

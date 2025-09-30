@@ -29,7 +29,7 @@ export const AutomaticReadScreen = () => {
   // Khởi tạo hookProps
   GetHookProps();
 
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapView>(null); 
   const cameraRef = useRef<Camera>(null);
 
   // Khi mount → request location + cleanup khi unmount
@@ -280,7 +280,7 @@ export const AutomaticReadScreen = () => {
         </View>
       </Modal>
     </View>
-  );
+  );   
 };
 
 const styles = StyleSheet.create({
