@@ -29,7 +29,7 @@ export const requestBlePermission = async (): Promise<boolean> => {
         }
       }
     } catch {}
-  }
+  }0
   return Promise.resolve(true);
 };
 
@@ -140,10 +140,14 @@ export const send = async (idPeripheral: string, data: number[]) => {
     const START = 0xAA;
     const COMMAND = 0x00;
     const LENGTH = data.length;
-    const baseData = [START,COMMAND, LENGTH, ...data];
+    const lengthLow = LENGTH & 0xff;
+    const lengthHigh = (LENGTH >> 8) & 0xff;
+    const baseData = [START,COMMAND, lengthLow,lengthHigh, ...data];
     const buf = Buffer.from(baseData);
     const crc = crc16(buf, buf.length);
-    const fullFrame = [...baseData,crc & 0xff,(crc >> 8) & 0xff];
+    const OKE_BYTES = [0x4F, 0x4B, 0x45];
+    const fullFrame = [...baseData,crc & 0xff,(crc >> 8) & 0xff,...OKE_BYTES];
+    console.log ("fullFrame" + fullFrame)
     await BleManager.write(idPeripheral, service, characteristic, fullFrame,256);
   } catch (err: any) {
     console.log(TAG + 'Error sending:', err);
@@ -151,59 +155,54 @@ export const send = async (idPeripheral: string, data: number[]) => {
 };
 export const sendOptical = async (idPeripheral: string, data: number[]) => {
   try {
-    const data = [
-      0x02, 0x08, 0x06, 0x0B,
-      0x4B, 0x54, 0x44, 0x54, 0x45, 0x4D, 0x49, 0x43, 0x32, 0x35,
-      0x00, 0x00, 0x08,
-      0x45, 0x4D, 0x49, 0x43, 0x31, 0x39, 0x38, 0x33,
-      0x03
-    ];
+    const payloadArray = Uint8Array.from(data);
 
-    // CRC1 cho payload
-    const crcdata = crc16(Buffer.from(data), data.length);
-
-    // Ghép payload + CRC1
+    // ✅ CRC1 cho payload
+    const crcdata = crc16(payloadArray, payloadArray.length);
     const DataFull = [...data, crcdata & 0xff, (crcdata >> 8) & 0xff];
-    console.log(
-      "📤 DataFull gửi:",
-      DataFull.map((x) => x.toString(16).padStart(2, "0")).join(" ")
-    );
-    // Base frame
-    const START = 0xAA;
+    console.log("📦 DataFull (payload+CRC1), length=", DataFull.length);
+
+    const START = 0xaa;
     const COMMAND = 0x01;
-    const LENGTH = data.length;
-    const baseData = [START, COMMAND, LENGTH+2, ...DataFull];
+    const lengthValue = DataFull.length; // chỉ tính payload + CRC1
+    const lengthLow = lengthValue & 0xff;
+    const lengthHigh = (lengthValue >> 8) & 0xff;
+    const baseData = [START, COMMAND, lengthLow, lengthHigh, ...DataFull];
+    const baseArray = Uint8Array.from(baseData);
+    const crc = crc16(baseArray, baseArray.length);
 
-    // CRC2 cho frame
-    const crc = crc16(Buffer.from(baseData), baseData.length);
+    const OKE_BYTES = [0x4F, 0x4B, 0x45];
+    const fullFrame = [...baseData, crc & 0xff, (crc >> 8) & 0xff, ...OKE_BYTES];
 
-    // Full frame
-    const fullFrame = [...baseData, crc & 0xff, (crc >> 8) & 0xff];
+    console.log("📤 FullFrame length=", fullFrame.length, "bytes");
 
-    console.log(
-      "📤 Data gửi:",
-      fullFrame.map((x) => x.toString(16).padStart(2, "0")).join(" ")
-    );
+    // 🟢 Gửi BLE theo chunk 128 bytes
+    const chunkSize = 128;
+    for (let offset = 0; offset < fullFrame.length; offset += chunkSize) {
+      const chunk = fullFrame.slice(offset, offset + chunkSize);
+      await BleManager.write(idPeripheral, service, characteristic, chunk, 256);
+      console.log(`📤 Sent chunk [${offset} - ${offset + chunk.length - 1}] (${chunk.length} bytes)`);
+    }
 
-    // Gửi qua BLE
-    await BleManager.write(idPeripheral, service, characteristic, fullFrame, 512);
+    console.log("✅ Gửi fullFrame hoàn tất.");
+  } catch (err: any) {
+    console.log(TAG + " Error sending:", err);
+    Alert.alert("Lỗi " + err);
+  }
+};
+export const sendHHU = async (idPeripheral: string, data: number[]) => {
+  try {
+    // Thêm 3 byte "OKE" (ASCII: 0x4F 0x4B 0x45)
+    const OKE_BYTES = [0x4F, 0x4B, 0x45];
+    const finalData = [...data, ...OKE_BYTES];
+
+    await BleManager.write(idPeripheral, service, characteristic, finalData, 256);
+
+    console.log("✅ Đã gửi dữ liệu kèm OKE:", finalData);
   } catch (err: any) {
     console.log(TAG + "Error sending:", err);
   }
 };
-
-export const sendHHU = async (idPeripheral: string, data: number[]) => {
-  try {
-    await BleManager.write(idPeripheral, service, characteristic, data,256);
-  } catch (err: any) {
-    console.log(TAG + 'Error sending:', err);
-  }
-};
-function toHexString(byteArray: number[]) {
-  return byteArray
-    .map(b => b.toString(16).padStart(2, '0')) // Chuyển sang hex, thêm 0 nếu 1 ký tự
-    .join(' ');
-}
 export const stopNotification = async (idPeripheral: string) => {
   try {
     await BleManager.stopNotification(idPeripheral, service, characteristic);

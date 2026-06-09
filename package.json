@@ -33,7 +33,6 @@
     "lodash": "^4.17.21",
     "react": "19.0.0",
     "react-native": "0.79.2",
-    "react-native-android-location-enabler": "^2.0.1",
     "react-native-ble-manager": "^12.1.5",
     "react-native-chart-kit": "^6.12.0",
     "react-native-device-info": "^14.0.4",

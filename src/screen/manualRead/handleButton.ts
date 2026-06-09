@@ -10,6 +10,9 @@ import BleManager from 'react-native-ble-manager';
 import axios from 'axios';
 import { parseDateBCD } from '../../service/hhu/aps/util';
 import { PropsHistoryMeterDataModel, PropsMeterDataModel, TABLE_NAME_METER_DATA, TABLE_NAME_METER_HISTORY } from '../../database/entity';
+import { createHhuHandler } from '../../service/hhu/hhuHandler';
+import { resetState } from '../../service/hhu/hhuState';
+import { addBleListener, removeBleListener } from '../../service/hhu/ble';
 let hhuReceiveDataListener: EventSubscription | null = null;
 // ✅ Xin quyền vị trí
 let watchId: number | null = null;
@@ -124,12 +127,164 @@ export const stopReading = () => {
   hookProps.setState((prev) => ({ ...prev, isAutoReading: false }));
   console.log("🛑 Đã yêu cầu dừng đọc meter");
 };
+
 let shouldStopReading = false;
-
-// Biến lưu serial meter đang đọc hiện tại
 let currentMeterSerialReading: string | null = null;
+const handler = createHhuHandler(hookProps);
+let initialTimeout: NodeJS.Timeout | null = null;
+let initialSendRetryCount = 0;
 
+export const readOneMeter = async (meterNo: string): Promise<boolean> => {
+  return new Promise(async (resolve) => {
+    const isConnected = await checkPeripheralConnection(store.state.hhu.idConnected);
+    if (!isConnected) return resolve(false);
 
+    console.log("🔄 Bắt đầu đọc meter:", meterNo);
+
+    removeBleListener();
+    handler.prepareForRead();
+
+    const meter = hookProps.state.listMeter.find(m => m.METER_NO === meterNo);
+    if (!meter) return resolve(false);
+
+    // báo trạng thái "đang đọc"
+    hookProps.setState(prev => ({
+      ...prev,
+      readingStatus: { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: "reading" as const },
+    }));
+
+    let finished = false;
+    let initialTimeout: NodeJS.Timeout | null = null;
+    let initialSendRetryCount = 0;
+
+    // listener nhận dữ liệu
+    addBleListener(async (data) => {
+      if (handler._internal.hasFinished() || finished) return;
+      await handler.hhuHandleReceiveData(data);
+
+      if (!handler._internal.hasFinished()) return;
+
+      console.log("✅ Đã xử lí xong toàn bộ packet cho", meterNo);
+      finished = true;
+      removeBleListener();
+      if (initialTimeout) clearTimeout(initialTimeout);
+
+      const meterData = handler._internal.getCurrentMeterData();
+      const historyRecords = handler._internal.getAccumulatedRecords();
+
+      if (!meterData) {
+        handler.cleanup();
+        return resolve(false);
+      }
+
+      try {
+        // insert meter data
+        await insertMeterData({
+          METER_NO: meterData.serial,
+          TIMESTAMP: new Date(),
+          IMPORT_DATA: meterData.impData,
+          EXPORT_DATA: meterData.expData,
+          EVENT: meterData.event,
+          BATTERY: meterData.batteryLevel,
+          PERIOD: meterData.latchPeriod,
+        });
+
+        // insert history
+        if (historyRecords && historyRecords.length > 0) {
+          const batch = historyRecords.map((r: any) => ({
+            METER_NO: meterData.serial,
+            TIMESTAMP: r.timestamp,
+            DATA_RECORD: r.value,
+          }));
+          await insertMeterHistoryBatch(batch);
+          console.log(`🔁 Insert batch history count=${batch.length}`);
+        }
+
+        hookProps.setState(prev => ({
+          ...prev,
+          readingStatus: { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: "success" },
+          listMeter: prev.listMeter.map(m =>
+            m.METER_NO === meter.METER_NO ? { ...m, STATUS: "1" } : m
+          ),
+        }));
+        await changeMeterStatus(meter.METER_NO, "1");
+
+        handler.cleanup();
+        return resolve(true);
+      } catch (err) {
+        console.error("❌ Insert DB error:", err);
+
+        hookProps.setState(prev => ({
+          ...prev,
+          readingStatus: { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: "fail" },
+          listMeter: prev.listMeter.map(m =>
+            m.METER_NO === meter.METER_NO ? { ...m, STATUS: "2" } : m
+          ),
+        }));
+        await changeMeterStatus(meter.METER_NO, "2");
+
+        handler.cleanup();
+        return resolve(false);
+      }
+    });
+
+    // gói đầu tiên
+    const requestData = buildQueryDataPacket(meterNo, 1, false);
+
+    // vòng lặp retry
+    const initialRetryLoop = async () => {
+      if (handler._internal.hasFinished() || handler._internal.hasReceivedAnyPacket()) return;
+      initialSendRetryCount++;
+      console.warn(`⚠️ Gửi lại gói 1 - lần ${initialSendRetryCount} cho ${meterNo}`);
+
+      try {
+        await send(store.state.hhu.idConnected, requestData);
+        hookProps.setState(prev => ({
+          ...prev,
+          readingStatus: { meterNo, name: meter?.CUSTOMER_NAME, status: "reading" },
+        }));
+      } catch (err) {
+        console.error("❌ Lỗi khi gửi gói 1 (retry):", err);
+      }
+
+      if (!handler._internal.hasReceivedAnyPacket() && initialSendRetryCount >= handler.getMaxRetry()) {
+        console.error("❌ Không nhận được phản hồi sau nhiều lần thử");
+        hookProps.setState(prev => ({
+          ...prev,
+          readingStatus: { meterNo, name: meter?.CUSTOMER_NAME, status: "fail" },
+          listMeter: prev.listMeter.map(m =>
+            m.METER_NO === meterNo ? { ...m, STATUS: "2" } : m
+          ),
+        }));
+        await changeMeterStatus(meterNo, "2");
+
+        handler.cleanup();
+        if (initialTimeout) clearTimeout(initialTimeout);
+        return resolve(false);
+      }
+
+      if (initialTimeout) clearTimeout(initialTimeout);
+      initialTimeout = setTimeout(initialRetryLoop, 1000);
+    };
+
+    // gửi gói đầu tiên
+    try {
+      await send(store.state.hhu.idConnected, requestData);
+      console.log("🚀 Gửi gói 1 lần đầu cho", meterNo);
+    } catch (err) {
+      console.error("❌ Lỗi khi gửi lần đầu:", err);
+      handler.cleanup();
+      hookProps.setState(prev => ({
+        ...prev,
+        readingStatus: { meterNo, name: meter?.CUSTOMER_NAME, status: "fail" as const },
+      }));
+      return resolve(false);
+    }
+
+    if (initialTimeout) clearTimeout(initialTimeout);
+    initialTimeout = setTimeout(initialRetryLoop, 1000);
+  });
+};
 
 export const readMetersOnce = async () => {
   shouldStopReading = false;
@@ -147,8 +302,12 @@ export const readMetersOnce = async () => {
 
   const distanceLimit = Number(store.state.appSetting.setting.distance);
   const metersToRead = hookProps.state.listMeter
-    .filter(m => m.COORDINATE && ["0","2","6"].includes(m.STATUS) && getDistanceValue(m.COORDINATE, currentLocation) <= distanceLimit)
-    .sort((a, b) => getDistanceValue(a.COORDINATE, currentLocation) - getDistanceValue(b.COORDINATE, currentLocation));
+    .filter(m => m.COORDINATE && ["0","2","6"].includes(m.STATUS) &&
+      getDistanceValue(m.COORDINATE, currentLocation) <= distanceLimit)
+    .sort((a, b) =>
+      getDistanceValue(a.COORDINATE, currentLocation) -
+      getDistanceValue(b.COORDINATE, currentLocation)
+    );
 
   if (metersToRead.length === 0) {
     hookProps.setState(prev => ({ ...prev, isAutoReading: false }));
@@ -157,10 +316,12 @@ export const readMetersOnce = async () => {
 
   for (const meter of metersToRead) {
     if (shouldStopReading) break;
-    console.log(`🔄 Đang đọc meter: ${meter.METER_NO}`);
 
-    await readOneMeter(meter.METER_NO);
-    await new Promise(res => setTimeout(res, 200));
+    console.log(`🔄 Đang đọc meter: ${meter.METER_NO}`);
+    const ok = await readOneMeter(meter.METER_NO); // chờ đọc xong mới tiếp
+    console.log(`📊 Kết quả meter ${meter.METER_NO}:`, ok ? "success" : "fail");
+
+    await new Promise(res => setTimeout(res, 300)); // delay nhỏ
   }
 
   hookProps.setState(prev => ({
@@ -172,291 +333,11 @@ export const readMetersOnce = async () => {
 };
 
 
-export const readOneMeter = async (meterNo: string) => {
-  const db = await getDBConnection();
-  if (!db) return;
 
-  await checkTabelDBIfExist();
-
-  // 🔑 Xóa dữ liệu theo meterNo
-  await db.executeSql(
-    `DELETE FROM ${TABLE_NAME_METER_DATA} WHERE METER_NO = ?`,
-    [meterNo]
-  );
-
-  await db.executeSql(
-    `DELETE FROM ${TABLE_NAME_METER_HISTORY} WHERE METER_NO = ?`,
-    [meterNo]
-  );
-  shouldStopReading = false;
-
-  const isConnected = await checkPeripheralConnection(store.state.hhu.idConnected);
-  if (!isConnected) return false;
-
-  const meter = hookProps.state.listMeter.find(m => m.METER_NO === meterNo);
-  if (!meter) {
-    console.warn(`⚠️ Không tìm thấy meter ${meterNo}`);
-    return false;
-  }
-
-  console.log(`🎯 Đọc meter: ${meter.METER_NO}`);
-  hookProps.setState(prev => ({
-    ...prev,
-    readingStatus: { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: "reading" },
-    listMeter: prev.listMeter.map(m => m.METER_NO === meter.METER_NO ? { ...m, STATUS: "6" } : m)
-  }));
-  await changeMeterStatus(meter.METER_NO, "6");
-
-  currentMeterSerialReading = meter.METER_NO;
-
-  return new Promise<boolean>((resolve) => {
-    let finished = false;
-    let timeout: NodeJS.Timeout;
-
-    let receivedPackets = 0;
-    let expectedPackets = 0;
-    let successOverall = false;
-
-    // Buffer lưu tất cả packet theo indexPacket
-    const packetBuffer: Record<number, number[]> = {};
-
-    const cleanup = () => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timeout);
-      listener.remove();
-    };
-
-    const handleResult = async (success: boolean) => {
-      const currentMeter = hookProps.state.listMeter.find(m => m.METER_NO === meter.METER_NO);
-      const prevStatus = currentMeter?.STATUS;
-
-      // Nếu đã success thì giữ nguyên
-      const newStatus = prevStatus === "1" ? "1" : (success ? "1" : "2");
-      const newReadingStatus = prevStatus === "1"
-        ? { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: "success" }
-        : { meterNo: meter.METER_NO, name: meter.CUSTOMER_NAME, status: success ? "success" : "fail" };
-
-      hookProps.setState(prev => ({
-        ...prev,
-        readingStatus: newReadingStatus,
-        listMeter: prev.listMeter.map(m => m.METER_NO === meter.METER_NO ? { ...m, STATUS: newStatus } : m)
-      }));
-
-      await changeMeterStatus(meter.METER_NO, newStatus);
-      setTimeout(() => resolve(success), 500);
-    };
-
-    const listener = BleManager.onDidUpdateValueForCharacteristic(async (data: { value: number[] }) => {
-      if (finished) return;
-
-      const buf = Buffer.from(data.value);
-      if (buf.length < 15) return;
-
-      const serialReceived = buf.slice(4, 14).toString("ascii");
-      if (serialReceived !== currentMeterSerialReading) return;
-
-      const payload = Array.from(buf.slice(14, 14 + buf[3]));
-      const indexPacket = payload[1];
-
-      if (indexPacket === 1) expectedPackets = payload[14]; // gói đầu báo tổng số gói
-
-      packetBuffer[indexPacket] = payload; // lưu payload vào buffer
-      receivedPackets++;
-
-      // Khi nhận đủ tất cả packet, xử lý theo thứ tự
-      if (receivedPackets >= expectedPackets) {
-        cleanup();
-        try {
-          // Xử lý từng packet theo thứ tự
-          const orderedPackets = Object.keys(packetBuffer)
-            .map(k => Number(k))
-            .sort((a, b) => a - b)
-            .map(i => packetBuffer[i]);
-
-          for (const p of orderedPackets) {
-            const res = await responeData(p, meter.METER_NO);
-            if (res) successOverall = true;
-          }
-
-          await handleResult(successOverall);
-        } catch (err) {
-          console.error("❌ Xử lý packet thất bại:", err);
-          await handleResult(false);
-        }
-      }
-    });
-
-    const dataPacket = buildQueryDataPacket(meter.METER_NO,1);
-    send(store.state.hhu.idConnected, dataPacket).catch(err => {
-      console.error("❌ Gửi dữ liệu thất bại:", err);
-      cleanup();
-      handleResult(false);
-    });
-
-    timeout = setTimeout(() => {
-      if (finished) return;
-      cleanup();
-      console.warn(`⏱ Timeout meter ${meter.METER_NO}`);
-      handleResult(false);
-    }, 5000);
-  }).finally(async () => {
-    currentMeterSerialReading = null;
-    await new Promise(res => setTimeout(res, 200));
-    hookProps.setState(prev => ({ ...prev, readingStatus: null }));
-  });
+export const stopReadData = () => {
+  shouldStopReading = true;
+  handler.cleanup();
 };
-
-
-export let hhuHandleReceiveData = async (data: { value: number[] }) => {
-  const buf = Buffer.from(data.value);
-  if (buf.length < 15 || buf[0] !== 0x02 || buf[1] !== 0x08) return;
-
-  const commandType = buf[2];
-  const lenPayload = buf[3];
-  const meterSerial = buf.slice(4, 14).toString("ascii");
-
-  // Chỉ xử lý meter đang đọc
-  if (meterSerial !== currentMeterSerialReading) return;
-
-  const payload = Array.from(buf.slice(14, 14 + lenPayload));
-
-  if (commandType === 0x01) {
-    await responeData(payload, meterSerial);
-  } else {
-    console.log("⚠️ Unknown commandType:", commandType);
-  }
-};
-
-// Biến toàn cục
-let globalLatchPeriodMinutes = 0;
-let globalOldestTime: Date | null = null;
-
-export async function responeData(payload: number[], meterSerial: string): Promise<boolean> {
-  if (payload.length < 3) return false;
-
-  const u8CommandCode = payload[0];
-  const indexPacket = payload[1];
-  const recordCount = payload[2];
-  const bytePerRecord = u8CommandCode === 1 ? 4 : 2;
-  let offset = 3;
-
-  let currentDate: Date | null = null;
-  let impData = 0, expData = 0;
-  let event = "", batteryLevel = "";
-  let totalPacket = 0;
-  let lastRecordTime: Date | null = null;
-
-  // Gói đầu tiên
-  if (indexPacket === 1) {
-    const currentTimeBytes = payload.slice(offset, offset + 6);
-    currentDate = parseDateBCD(currentTimeBytes);
-    offset += 6;
-
-    impData = parseUint32(payload.slice(offset, offset + 4));
-    offset += 4;
-    expData = parseUint32(payload.slice(offset, offset + 4));
-    offset += 4;
-
-    event = payload[offset].toString(16).padStart(2, "0");
-    offset += 1;
-
-    const voltage = payload[offset] / 10;
-    batteryLevel = `${Math.min(100, Math.max(0, (voltage / 3.6) * 100)).toFixed(0)}%`;
-    offset += 1;
-
-    globalLatchPeriodMinutes = (payload[offset] & 0xff) | ((payload[offset + 1] & 0xff) << 8);
-    offset += 2;
-
-    totalPacket = payload[offset];
-    offset += 1;
-
-    // Mốc thời gian cũ nhất là currentDate
-    globalOldestTime = currentDate ? new Date(currentDate) : new Date();
-
-    // Lưu dữ liệu meter chính
-    await insertMeterData({
-      METER_NO: meterSerial,
-      TIMESTAMP: new Date(),
-      IMPORT_DATA: impData.toString(),
-      EXPORT_DATA: expData.toString(),
-      EVENT: event,
-      BATTERY: batteryLevel,
-      PERIOD: globalLatchPeriodMinutes.toString(),
-    });
-  }
-
-  const historyBatch: { METER_NO: string; TIMESTAMP: Date; DATA_RECORD: string }[] = [];
-
-  // Tạo record history
-  for (let i = 0; i < recordCount; i++) {
-    const start = offset + i * bytePerRecord;
-    const value = u8CommandCode === 1
-      ? parseUint32(payload.slice(start, start + bytePerRecord))
-      : parseUint16(payload.slice(start, start + bytePerRecord));
-
-    let recordTime: Date;
-
-    if (indexPacket === 1 && currentDate) {
-      // Gói đầu tiên: tính từ currentDate lùi theo thứ tự cũ → mới
-      // i=0 là record cũ nhất, i=recordCount-1 là mới nhất
-      recordTime = new Date(currentDate.getTime() - (recordCount - 1 - i) * globalLatchPeriodMinutes * 60_000);
-    } else if (lastRecordTime) {
-      // Gói tiếp theo: lùi từ bản ghi mới nhất trước đó
-      recordTime = new Date(lastRecordTime.getTime() - globalLatchPeriodMinutes * 60_000);
-    } else if (globalOldestTime) {
-      // Trường hợp đặc biệt nếu không có lastRecordTime
-      recordTime = new Date(globalOldestTime.getTime() - globalLatchPeriodMinutes * 60_000);
-    } else {
-      recordTime = new Date();
-    }
-
-    // Cập nhật lastRecordTime
-    lastRecordTime = recordTime;
-
-    // Cập nhật globalOldestTime nếu cần
-    if (!globalOldestTime || recordTime.getTime() < globalOldestTime.getTime()) {
-      globalOldestTime = recordTime;
-    }
-
-    historyBatch.push({
-      METER_NO: meterSerial,
-      TIMESTAMP: recordTime,
-      DATA_RECORD: value.toString(),
-    });
-  }
-
-  // Lưu batch vào DB
-  if (historyBatch.length > 0) {
-    await insertMeterHistoryBatch(historyBatch);
-  }
-
-  // Cập nhật state
-  hookProps.setState((prev) => {
-    const prevRecords = prev.meterData?.dataRecords || [];
-    const mergedRecords = [...prevRecords, ...historyBatch.map(h => ({ timestamp: h.TIMESTAMP, value: Number(h.DATA_RECORD) }))].sort(
-      (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-    );
-
-    return {
-      ...prev,
-      meterData: {
-        serial: meterSerial,
-        currentTime: currentDate ?? new Date(),
-        impData,
-        expData,
-        event,
-        batteryLevel,
-        latchPeriod: globalLatchPeriodMinutes.toString(),
-        totalPacket,
-        dataRecords: mergedRecords,
-      },
-    };
-  });
-
-  console.log(`📥 Đã nhận gói ${indexPacket}/${totalPacket}`);
-  return true;
-}
 
 
 const API_KEY = "f4a6c08959b47211756357354b1b73ac74"; // 👈 key của bạn
@@ -467,13 +348,6 @@ export const getDirections = async (
   mode: "driving" | "walking" | "motorcycling" | "truck" 
 ) => {
   try {
-    // 🔄 Hàm đổi "lat,lng" -> "lng,lat"
-    const formatCoords = (coord: string) => {
-      const [lat, lng] = coord.split(",").map(Number);
-      return `${lng},${lat}`;
-    };
-
-
     console.log(`🔎 Đang tìm đường đi từ ${origin} đến ${destination}`);
 
     const url = "https://maps.track-asia.com/route/v2/directions/json";
@@ -573,3 +447,5 @@ export const onClose = () => {
     historyData: null,
   }));
 };
+
+

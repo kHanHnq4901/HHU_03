@@ -4,6 +4,7 @@ import { PropsLineModel, PropsMeterDataModel, PropsMeterModel, TABLE_NAME_INFO_L
 import { checkTabelDBIfExist, getDBConnection } from "../../database/repository";
 import { PropsStore, storeContext } from "../../store";
 import { getDistanceValue } from "../../util/location";
+import { PropHistoryDataMeter } from "../readDataMeter/controller";
 
 export const hookProps = {} as HookProps;
 export type HookProps = {
@@ -44,6 +45,8 @@ export type HookState = {
   modalVisible : boolean;
   isShowDataModal : boolean;
   meterData: PropDataMeter | null; 
+  historyData: PropHistoryDataMeter | null;
+  currentTime: Date;
 };
 
 export const GetHookProps = (): HookProps => {
@@ -60,6 +63,8 @@ export const GetHookProps = (): HookProps => {
     modalVisible : false,
     isShowDataModal : false,
     meterData: null,
+    historyData : null,
+    currentTime: new Date(),
   });
 
   useEffect(() => {

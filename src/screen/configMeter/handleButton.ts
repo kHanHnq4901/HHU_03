@@ -3,7 +3,7 @@ import { screenDatas } from '../../shared';
 import { isValidText, showAlert, showSnack } from '../../util';
 import { hookProps } from './controller';
 import { checkPeripheralConnection, send } from '../../util/ble';
-import { buildGetParamPacket, buildSetParamPacket } from '../../service/hhu/aps/hhuAps';
+import { buildGetParamPacket, buildSetParamPacket, buildWakeUpPacket } from '../../service/hhu/aps/hhuAps';
 import { ERROR_MESSAGES, ERROR_TABLE, LoraCommandCode } from '../../service/hhu/defineEM';
 import { store } from '../overview/controller';
 import BleManager from 'react-native-ble-manager';
@@ -11,10 +11,10 @@ let hhuReceiveDataListener: EventSubscription | null = null;
 const TAG = 'Handle Config Meter:';
 export const readConfig = async () => {
   try {
-    if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
-      Alert.alert('Thông báo','Vui lòng điền serial đủ 10 ký tự');
-      return;
-    }
+    // if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
+    //   Alert.alert('Thông báo','Vui lòng điền serial đủ 10 ký tự');
+    //   return;
+    // }
 
     const isConnected = await checkPeripheralConnection(store.state.hhu.idConnected);
     if (!isConnected) return;
@@ -52,8 +52,8 @@ export const readConfig = async () => {
     }
 
     const data = buildGetParamPacket(hookProps.state.serial, command);
-
-
+    const dateWakeUp = buildWakeUpPacket(hookProps.state.serial,0x00);
+    await send (store.state.hhu.idConnected, dateWakeUp)  
     await send(store.state.hhu.idConnected, data);
     console.log('📤 Data gửi:', data);
     let timeout: NodeJS.Timeout;
@@ -156,30 +156,48 @@ export function parseFotaResponse(data: number[]) {
 export const hhuHandleReceiveData = (data: { value: number[] }) => {
   console.log('data update for characteristic:', data.value);
   const buf = Buffer.from(data.value);
-  if (buf[0] === 0xAA){
-    parseFotaResponse(data.value)
+
+  // ✅ Trường hợp gói FOTA riêng biệt
+  if (buf[0] === 0xAA) {
+    parseFotaResponse(data.value);
+    return;
   }
-  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x08) { // kiểm tra tối thiểu
+
+  // ✅ Kiểm tra header hợp lệ
+  if (buf.length >= 7 && buf[0] === 0x08) {
     console.log("✅ Header hợp lệ");
 
-    const moduleType = buf[1];
-    const commandType = buf[2];
-    const lenPayload = buf[3];
-    const meterSerialBytes = buf.slice(4, 14); // 10 byte meter serial
-    const meterSerial = meterSerialBytes.toString('ascii'); // nếu là string ASCII
+    const moduleType = buf[0];
+    const commandType = buf[1];
+    const lenPayload = buf[2];
 
-    const payloadStart = 14;
+    // ✅ Serial là 4 byte uint32_t
+    const meterSerialBytes = buf.slice(3, 7);
+    const meterSerial =
+      (meterSerialBytes[0]) |
+      (meterSerialBytes[1] << 8) |
+      (meterSerialBytes[2] << 16) |
+      (meterSerialBytes[3] << 24);
+
+    console.log("📟 Meter Serial:", meterSerial);
+
+    const payloadStart = 7; // sau 4 byte serial
     const payloadEnd = payloadStart + lenPayload;
-    const payload = Array.from(buf.slice(payloadStart, payloadEnd)); // chỉ lấy payload
+    const payload = Array.from(buf.slice(payloadStart, payloadEnd));
 
-    console.log("📡 Meter Serial:", meterSerial);
     console.log("📦 Payload:", payload);
-    if (hookProps.state.serial && meterSerial !== hookProps.state.serial) {
+
+    // ✅ Bỏ qua dữ liệu của serial khác
+    if (
+      hookProps.state.serial &&
+      meterSerial.toString() !== hookProps.state.serial
+    ) {
       console.warn(
         `⚠️ Bỏ qua dữ liệu của meterSerial=${meterSerial} vì đang đọc meterSerial=${hookProps.state.serial}`
       );
       return;
     }
+
     switch (commandType) {
       case 0x03:
         responeSetting(payload);
@@ -187,8 +205,9 @@ export const hhuHandleReceiveData = (data: { value: number[] }) => {
       default:
         console.log("⚠️ Unknown type:", commandType, payload);
     }
-  } 
+  }
 };
+
 export function responeSetting(payload: number[]) {
   console.log("🔹 Xử lý Setting:", payload);
 
@@ -282,10 +301,10 @@ let hasConfigResponse = false; // ⚡️ thêm cờ
 
 export const writeConfig = async () => {
   try {
-    if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
-      Alert.alert("Thông báo", "Vui lòng điền serial đủ 10 ký tự");
-      return;
-    }
+    // if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
+    //   Alert.alert("Thông báo", "Vui lòng điền serial đủ 10 ký tự");
+    //   return;
+    // }
 
     const serial = hookProps.state.serial;
     const {
@@ -350,7 +369,6 @@ export const writeConfig = async () => {
 
     console.log("📤 Gửi packet gộp:", packet);
 
-
     if (hhuReceiveDataListener) {
       hhuReceiveDataListener.remove();
       hhuReceiveDataListener = null;
@@ -381,79 +399,104 @@ export const writeConfig = async () => {
     Alert.alert("Lỗi", "Không thể gửi cấu hình");
   }
 };
-
 export const hhuResponeConfig = (data: { value: number[] }) => {
   console.log("📩 Nhận phản hồi từ thiết bị:", data.value);
   const buf = Buffer.from(data.value);
 
-  if (buf.length >= 15 && buf[0] === 0x02 && buf[1] === 0x08) {
-    console.log("✅ Header hợp lệ");
+  // 1️⃣ Kiểm tra header
+  if (buf[0] !== 0x08) {
+    console.log("❌ Header không hợp lệ", buf);
+    return;
+  }
+  console.log("✅ Header hợp lệ");
 
-    const commandType = buf[2];
-    const lenPayload = buf[3];
-    const meterSerial = buf.slice(4, 14).toString("ascii");
+  // 2️⃣ Lấy thông tin cơ bản
+  const commandType = buf[1];
+  const lenPayload = buf[2];
 
-    if (hookProps.state.serial && meterSerial !== hookProps.state.serial) {
-      console.warn(`⚠️ Bỏ qua dữ liệu của meterSerial=${meterSerial}`);
-      return;
+  // ✅ Serial là 3 byte (không phải 4)
+  const meterSerialBytes = buf.slice(3, 6);
+  const meterSerial =
+    (meterSerialBytes[0]) |
+    (meterSerialBytes[1] << 8) |
+    (meterSerialBytes[2] << 16);
+
+  console.log("📟 Meter Serial:", meterSerial);
+
+  // 3️⃣ Payload bắt đầu từ byte thứ 6 (index 6)
+  const payloadStart = 6;
+  const payloadEnd = payloadStart + lenPayload;
+  const payload = Array.from(buf.slice(payloadStart, payloadEnd));
+  console.log("📦 Payload:", payload);
+
+  // 4️⃣ Bỏ qua CRC (2 byte cuối)
+  const crcBytes = buf.slice(payloadEnd, payloadEnd + 2);
+  console.log("🧩 CRC16:", crcBytes);
+
+  // 5️⃣ Xử lý theo loại lệnh
+  switch (commandType) {
+    case 0x02: {
+      const result = responeSetConfig(payload);
+      if (!result) {
+        console.error("❌ responeSetConfig trả về giá trị không hợp lệ");
+        return;
+      }
+
+      if (configTimeout) {
+        clearTimeout(configTimeout);
+        configTimeout = null;
+      }
+      if (hhuReceiveDataListener) {
+        hhuReceiveDataListener.remove();
+        hhuReceiveDataListener = null;
+      }
+
+      if (result.success) {
+        Alert.alert("Thông báo", `✅ Cài đặt thành công (${result.count} trường)`);
+      } else {
+        Alert.alert("Thông báo", `❌ Cài đặt thất bại: ${result.error}`);
+      }
+
+      hookProps.setState((prev) => ({ ...prev, isReading: false }));
+      break;
     }
 
-    const payload = Array.from(buf.slice(14, 14 + lenPayload));
-    console.log("📡 Meter Serial:", meterSerial);
-    console.log("📦 Payload:", payload);
-
-    switch (commandType) {
-      case 0x02:
-        const result = responeSetConfig(payload);
-
-        if (configTimeout) {
-          clearTimeout(configTimeout);
-          configTimeout = null;
-        }
-
-        if (hhuReceiveDataListener) {
-          hhuReceiveDataListener.remove();
-          hhuReceiveDataListener = null;
-        }
-
-        if (result.success) {
-          Alert.alert("Thông báo", `✅ Cài đặt thành công (${result.count} trường)`);
-          hookProps.setState((prev) => ({ ...prev, isReading: false }));
-        } else {
-          Alert.alert("Thông báo", `❌ Cài đặt thất bại: ${result.error}`);
-          hookProps.setState((prev) => ({ ...prev, isReading: false }));
-        }
-        break;
-
-      default:
-        console.log("⚠️ Unknown type:", commandType, payload);
-    }
-  } else {
-    console.log("❌ Header không hợp lệ hoặc dữ liệu quá ngắn", buf);
+    default:
+      console.log("⚠️ Unknown command type:", commandType, payload);
+      break;
   }
 };
 
+
+
 const ERROR_CODES: Record<number, string> = {
-  0: "Thành công",
-  1: "Không xử lý",
-  2: "Tham số không hợp lệ",
-  3: "Hết thời gian chờ",
-  4: "Hết bộ nhớ",
-  5: "Lỗi SPI",
-  6: "CSDL rỗng",
-  7: "CSDL hết bộ nhớ",
-  8: "Định dạng không hợp lệ",
-  9: "Lỗi RTC",
-  10: "Lệnh không hợp lệ",
-  11: "Mã lệnh không hợp lệ",
-  12: "Sai CRC",
-  13: "Từ chối quyền",
-  14: "Null pointer",
-  15: "Lỗi truyền dữ liệu",
-  16: "Chiều dài quá ngắn",
-  17: "Lỗi mã hóa",
-  18: "Lỗi không xác định",
+  0: "Thành công", // E_SUCCESS
+  1: "Không xử lý", // E_NOT_PROCESS
+  2: "Tham số không hợp lệ", // E_ERROR_INVALID_PARAM
+  3: "Chiều dài không hợp lệ", // E_ERROR_INVALID_LENGTH
+  4: "Hết thời gian chờ", // E_ERROR_TIMEOUT
+  5: "Hết bộ nhớ", // E_ERROR_OUT_OF_MEMORY
+  6: "Lỗi SPI", // E_ERROR_SPI_FAILURE
+  7: "CSDL rỗng", // E_ERROR_DB_EMPTY
+  8: "CSDL hết bộ nhớ", // E_ERROR_DB_OUT_OF_MEMORY
+  9: "Định dạng không hợp lệ", // E_ERROR_INVALID_FORMAT
+  10: "Lỗi RTC", // E_ERROR_RTC_FAILURE
+  11: "Lệnh không hợp lệ", // E_ERROR_INVALID_COMMAND
+  12: "Mã lệnh không hợp lệ", // E_ERROR_INVALID_COMMAND_CODE
+  13: "Sai CRC", // E_ERROR_CRC_FAILURE
+  14: "Từ chối quyền truy cập", // E_ERROR_PERMISSION_DENIED
+  15: "Null pointer", // E_ERROR_NULL_POINTER
+  16: "Lỗi truyền dữ liệu", // E_ERROR_TRANSMISSION
+  17: "Chiều dài quá ngắn", // E_ERROR_LEN_TOO_SHORT
+  18: "Lỗi mã hóa / giải mã", // E_ERROR_CRYPT_FAILURE
+  19: "Ngày kích hoạt không hợp lệ", // E_ERROR_INVALID_WAKEUP_DATES
+  20: "Serial công tơ không hợp lệ", // E_ERROR_INVALID_METER_SERIAL
+  21: "Loại module không hợp lệ", // E_ERROR_INVALID_MODULE_TYPE
+  22: "Sai mật khẩu", // E_ERROR_INVALID_PASSWORD
+  23: "Hàm set bị null", // E_ERROR_NULL_SET_FUNCTION
+  24: "Hàm get bị null", // E_ERROR_NULL_GET_FUNCTION
 };
+
 
 export function responeSetConfig(payload: number[]) {
   console.log("🔹 Xử lý phản hồi Setting:", payload);
@@ -470,8 +513,10 @@ export function responeSetConfig(payload: number[]) {
   const errorMsg = ERROR_CODES[u8Res] || `Mã lỗi không xác định (${u8Res})`;
 
   if (u8Res === 0) {
+    console.log(`✅ Thành công: CommandCode=0x${u8CommandCode.toString(16)}, ParamCount=${u8ParamCount}`);
     return { success: true, count: u8ParamCount, command: u8CommandCode, error: null };
   } else {
+    console.log(`❌ Thất bại: ${errorMsg}`);
     return { success: false, count: 0, command: u8CommandCode, error: errorMsg };
   }
 }

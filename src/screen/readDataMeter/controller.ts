@@ -30,6 +30,11 @@ export type PropHistoryDataMeter = {
 
 export type HookState = {
   serial: string;
+  successCount: number ,
+  failCount: number,
+  fullDataReceived: number,
+  partialDataReceived: number,
+  noResponse: number,
   currentTime: Date | null ;
   isDetailedRead: boolean;
   meterData: PropDataMeter | null;       // Header (1 dòng duy nhất)
@@ -44,6 +49,11 @@ export let store = {} as PropsStore;
 export const GetHookProps = (): HookProps => {
   const [state, setState] = useState<HookState>({
     serial: "",
+    successCount: 0,
+    failCount: 0,
+    fullDataReceived: 0,
+    partialDataReceived: 0,
+    noResponse: 0,
     currentTime : null,
     isDetailedRead: false,
     meterData: null,

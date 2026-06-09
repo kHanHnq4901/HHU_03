@@ -7775,11 +7775,6 @@ react-is@^19.0.0, react-is@^19.1.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.1.0.tgz#805bce321546b7e14c084989c77022351bbdd11b"
   integrity sha512-Oe56aUPnkHyyDxxkvqtd7KkdQP5uIUfHxd5XTb3wE9d/kRnZLmKbDB0GWk919tdQ+mxxPtG6EAs6RMT6i1qtHg==
 
-react-native-android-location-enabler@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/react-native-android-location-enabler/-/react-native-android-location-enabler-2.0.1.tgz#d3073d1ddc75c1afa304948156de3347fbf47174"
-  integrity sha512-hDNfQL4gImrmc6K6J44kd2iKrpPHc23V4stujNIg3I1LvYLT+kwWmfTGapeY0hl6EXACfaFdm/wBb4ggtNcnPA==
-
 react-native-ble-manager@^12.1.5:
   version "12.1.5"
   resolved "https://registry.yarnpkg.com/react-native-ble-manager/-/react-native-ble-manager-12.1.5.tgz#84d3a521c1e51eb0a30f1bbb0c00c3930b62b00a"

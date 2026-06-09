@@ -90,8 +90,6 @@ export const readConfig = async () => {
 };
 
 export function parseFotaResponse(data: number[]) {
-  console.log("🔹 Data update for characteristic:", data);
-
   if (data.length < 6) {
     console.warn("⚠️ Payload quá ngắn!");
     return { success: false, message: "Payload không hợp lệ" };
@@ -147,7 +145,7 @@ export function parseFotaResponse(data: number[]) {
   }
 
   console.log(`📡 FOTA Response | Cmd: ${command}, Index: ${index}, CRC: ${crc}`);
-  console.log(message);
+  Alert.alert(message);
 
   return { success, code: response, message, command, index, crc };
 }
@@ -279,107 +277,147 @@ function applySetting(paramId: number, paramData: number[]) {
 let configTimeout: NodeJS.Timeout | null = null;
 let hasConfigResponse = false; // ⚡️ thêm cờ
 
+// export const writeConfig = async () => {
+//   try {
+//     if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
+//       Alert.alert("Thông báo", "Vui lòng điền serial đủ 10 ký tự");
+//       return;
+//     }
+
+//     const serial = hookProps.state.serial;
+//     const {
+//       timeRange1Start,
+//       timeRange1End,
+//       timeRange2Start,
+//       timeRange2End,
+//       daysPerMonth,
+//       cycle,
+//       readCycle,
+//       readTimeRange,
+//       readDaysPerMonth,
+//     } = hookProps.state;
+
+//     const params: { id: number; data: number[] }[] = [];
+
+//     // 1️⃣ WakeUp Time
+//     if (readTimeRange && timeRange1Start && timeRange1End && timeRange2Start && timeRange2End) {
+//       const data = [
+//         timeRange1Start.getHours(),
+//         timeRange1End.getHours(),
+//         timeRange2Start.getHours(),
+//         timeRange2End.getHours(),
+//       ];
+//       params.push({ id: 0x00, data });
+//     }
+
+//     // 2️⃣ WakeUp Specific Days
+//     if (readDaysPerMonth && daysPerMonth?.length > 0) {
+//       let days = daysPerMonth.map(Number);
+//       if (days.length < 7) {
+//         days = [...days, ...Array(7 - days.length).fill(0)];
+//       } else if (days.length > 7) {
+//         days = days.slice(0, 7);
+//       }
+//       params.push({ id: 0x01, data: days });
+//     }
+
+//     // 3️⃣ Period Latch
+//     if (readCycle && cycle) {
+//       const value = parseInt(cycle, 10);
+//       params.push({
+//         id: 0x02,
+//         data: [value & 0xff, (value >> 8) & 0xff],
+//       });
+//     }
+
+//     if (params.length === 0) {
+//       Alert.alert("Thông báo", "Không có dữ liệu nào để gửi");
+//       return;
+//     }
+
+//     const packet = buildSetParamPacket(serial, params);
+
+//     hookProps.setState((prev) => ({
+//       ...prev,
+//       isReading: true,
+//       textLoading: "Đang gửi cấu hình...",
+//     }));
+
+//     hasConfigResponse = false; // reset cờ mỗi lần gửi mới
+
+//     console.log("📤 Gửi packet gộp:", packet);
+
+
+//     if (hhuReceiveDataListener) {
+//       hhuReceiveDataListener.remove();
+//       hhuReceiveDataListener = null;
+//     }
+//     hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic((data: { value: number[] }) => {
+//       hhuResponeConfig(data);
+//     });
+//     await sendOptical(store.state.hhu.idConnected, packet);
+//     if (configTimeout) clearTimeout(configTimeout);
+//     configTimeout = setTimeout(() => {
+//       if (!hasConfigResponse) { // ✅ chỉ xử lý khi chưa có phản hồi
+//         hookProps.setState((prev) => ({
+//           ...prev,
+//           isReading: false,
+//           textLoading: "",
+//         }));
+//         if (hhuReceiveDataListener) {
+//           hhuReceiveDataListener.remove();
+//           hhuReceiveDataListener = null;
+//         }
+//         Alert.alert("Thông báo", "❌ Cấu hình thất bại (timeout)");
+//       }
+//     }, 5000);
+
+//   } catch (error) {
+//     console.error("❌ Lỗi khi gửi cấu hình:", error);
+//     hookProps.setState((prev) => ({ ...prev, isReading: false, textLoading: "" }));
+//     Alert.alert("Lỗi", "Không thể gửi cấu hình");
+//   }
+// };
+
 export const writeConfig = async () => {
   try {
-    if (!hookProps.state.serial || hookProps.state.serial.length !== 10) {
-      Alert.alert("Thông báo", "Vui lòng điền serial đủ 10 ký tự");
-      return;
-    }
+    const fakeData = new Array(1000).fill(0).map(() => Math.floor(Math.random() * 256));
+    console.log("📦 Fake 5KB data generated:", fakeData.length, "bytes");
 
-    const serial = hookProps.state.serial;
-    const {
-      timeRange1Start,
-      timeRange1End,
-      timeRange2Start,
-      timeRange2End,
-      daysPerMonth,
-      cycle,
-      readCycle,
-      readTimeRange,
-      readDaysPerMonth,
-    } = hookProps.state;
+    const dataObj = { value: fakeData };
 
-    const params: { id: number; data: number[] }[] = [];
-
-    // 1️⃣ WakeUp Time
-    if (readTimeRange && timeRange1Start && timeRange1End && timeRange2Start && timeRange2End) {
-      const data = [
-        timeRange1Start.getHours(),
-        timeRange1End.getHours(),
-        timeRange2Start.getHours(),
-        timeRange2End.getHours(),
-      ];
-      params.push({ id: 0x00, data });
-    }
-
-    // 2️⃣ WakeUp Specific Days
-    if (readDaysPerMonth && daysPerMonth?.length > 0) {
-      let days = daysPerMonth.map(Number);
-      if (days.length < 7) {
-        days = [...days, ...Array(7 - days.length).fill(0)];
-      } else if (days.length > 7) {
-        days = days.slice(0, 7);
-      }
-      params.push({ id: 0x01, data: days });
-    }
-
-    // 3️⃣ Period Latch
-    if (readCycle && cycle) {
-      const value = parseInt(cycle, 10);
-      params.push({
-        id: 0x02,
-        data: [value & 0xff, (value >> 8) & 0xff],
-      });
-    }
-
-    if (params.length === 0) {
-      Alert.alert("Thông báo", "Không có dữ liệu nào để gửi");
-      return;
-    }
-
-    const packet = buildSetParamPacket(serial, params);
-
-    hookProps.setState((prev) => ({
-      ...prev,
-      isReading: true,
-      textLoading: "Đang gửi cấu hình...",
-    }));
-
-    hasConfigResponse = false; // reset cờ mỗi lần gửi mới
-
-    console.log("📤 Gửi packet gộp:", packet);
-
-
+    // 🔹 Hủy listener cũ (nếu có)
     if (hhuReceiveDataListener) {
       hhuReceiveDataListener.remove();
       hhuReceiveDataListener = null;
     }
-    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic((data: { value: number[] }) => {
-      hhuResponeConfig(data);
-    });
-    await sendOptical(store.state.hhu.idConnected, packet);
-    if (configTimeout) clearTimeout(configTimeout);
-    configTimeout = setTimeout(() => {
-      if (!hasConfigResponse) { // ✅ chỉ xử lý khi chưa có phản hồi
-        hookProps.setState((prev) => ({
-          ...prev,
-          isReading: false,
-          textLoading: "",
-        }));
-        if (hhuReceiveDataListener) {
-          hhuReceiveDataListener.remove();
-          hhuReceiveDataListener = null;
-        }
-        Alert.alert("Thông báo", "❌ Cấu hình thất bại (timeout)");
-      }
-    }, 5000);
 
+    // 🔹 Đăng ký listener mới
+    hhuReceiveDataListener = BleManager.onDidUpdateValueForCharacteristic(
+      (data: { value: number[] }) => {
+        parseFotaResponse(data.value)
+      }
+    );
+
+    // 🔹 Tự động clear sau 2 giây
+    setTimeout(() => {
+      if (hhuReceiveDataListener) {
+        hhuReceiveDataListener.remove();
+        hhuReceiveDataListener = null;
+      }
+    }, 2000);
+
+    // 🔹 Gửi toàn bộ dữ liệu BLE
+    await sendOptical(store.state.hhu.idConnected, dataObj.value);
+
+    console.log("✅ Toàn bộ 5KB fake data đã gửi xong.");
   } catch (error) {
-    console.error("❌ Lỗi khi gửi cấu hình:", error);
-    hookProps.setState((prev) => ({ ...prev, isReading: false, textLoading: "" }));
-    Alert.alert("Lỗi", "Không thể gửi cấu hình");
+    console.error("❌ Lỗi khi gửi fake data:", error);
   }
 };
+
+
+
 
 export const hhuResponeConfig = (data: { value: number[] }) => {
   console.log("📩 Nhận phản hồi từ thiết bị:", data.value);

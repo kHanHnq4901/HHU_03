@@ -48,14 +48,30 @@ export const RealDataMeterScreen = () => {
           visible={hookProps.state.isReading}
           message={hookProps.state.textLoading}
         />
-
+        <View style={styles.statusContainer}>
+        <Text style={styles.statusText}>
+          Số lần gửi xuống HU thành công: {hookProps.state.successCount}
+        </Text>
+        <Text style={styles.statusText}>
+          Số lần gửi xuống HU thất bại: {hookProps.state.failCount}
+        </Text>
+        <Text style={styles.statusText}>
+          Nhận đủ dữ liệu từ thiết bị: {hookProps.state.fullDataReceived}
+        </Text>
+        <Text style={styles.statusText}>
+          Nhận thiếu dữ liệu: {hookProps.state.partialDataReceived}
+        </Text>
+        <Text style={styles.statusText}>
+          Không có phản hồi từ thiết bị: {hookProps.state.noResponse}
+        </Text>
+      </View>
         {/* Serial input + Toggle */}
         <View style={styles.serialRow}>
           <TextInput
             placeholder="Nhập serial đồng hồ"
             value={hookProps.state.serial}
             style={styles.textInput}
-            placeholderTextColor="#888"
+            placeholderTextColor="#888"                         
             onChangeText={(text) =>
               hookProps.setState((prev) => ({ ...prev, serial: text }))
             }
@@ -250,6 +266,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+    statusContainer: {
+      backgroundColor: '#dfe6fd',
+      padding: 10,
+      borderRadius: 12,
+      marginBottom: 12,
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+  },
+  statusText: {
+    fontSize: normalize(13),
+    color: '#2f4f9d',
+    marginVertical: 2,
+    fontWeight: '600',
+  },
+
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',

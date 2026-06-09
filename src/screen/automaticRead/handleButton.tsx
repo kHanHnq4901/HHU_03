@@ -258,8 +258,6 @@ export const startAutoRead = async () => {
 };
 
 
-
-
 export let hhuHandleReceiveData = (data: { value: number[] }) => {
   const buf = Buffer.from(data.value);
 
